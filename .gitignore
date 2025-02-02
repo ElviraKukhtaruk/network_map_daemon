@@ -1,0 +1,4 @@
+target/
+.cargo/config.toml
+.env
+config.toml

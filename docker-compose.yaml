@@ -1,0 +1,43 @@
+services:
+  clickhouse_db:
+    image: clickhouse/clickhouse-server:24.11-alpine
+    container_name: clickhouse_db
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "127.0.0.1:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      - CLICKHOUSE_DB=$CLICKHOUSE_DB
+      - CLICKHOUSE_USER=$CLICKHOUSE_USER
+      - CLICKHOUSE_PASSWORD=$CLICKHOUSE_PASSWORD
+    volumes:
+      - db_clickhouse:/var/lib/clickhouse
+      - ./docker-config/scripts/:/docker-entrypoint-initdb.d/
+      - ./docker-config/clickhouse-config/users.xml:/etc/clickhouse-server/users.xml
+
+  # rust_app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: rust_app
+  #   restart: unless-stopped
+  #   depends_on:
+  #     clickhouse_db:
+  #       condition: service_healthy
+  #   env_file: .env
+  #   environment:
+  #     - CLICKHOUSE_NATIVE_PORT=$CLICKHOUSE_NATIVE_PORT
+  #     - CLICKHOUSE_HOSTNAME=$CLICKHOUSE_HOSTNAME
+  #     - CLICKHOUSE_HOSTNAME_FOR_APP=$CLICKHOUSE_HOSTNAME_FOR_APP
+  #     - CLICKHOUSE_DB=$CLICKHOUSE_DB
+  #     - CLICKHOUSE_USER=$CLICKHOUSE_USER
+  #     - CLICKHOUSE_PASSWORD=$CLICKHOUSE_PASSWORD
+  #   network_mode: "host"
+
+volumes:
+  db_clickhouse:
