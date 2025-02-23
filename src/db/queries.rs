@@ -1,6 +1,7 @@
 use klickhouse::*;
 use crate::schema::{ Server, Addr };
 use crate::errors::query::QueryErr;
+use crate::interface::addr:: { get_addresses };
 
 pub async fn add_server(client: &Client, server: Server) -> Result<(), QueryErr> {
 

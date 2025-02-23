@@ -6,4 +6,3 @@ http_port = 8443
 native_port = 9000
 hostname_for_app = ""
 hostname = ""
-default_access_management = 1

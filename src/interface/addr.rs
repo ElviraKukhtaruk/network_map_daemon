@@ -1,0 +1,37 @@
+use std::net::IpAddr;
+use rtnetlink::Handle;
+
+use crate::interface::info;
+
+
+pub async fn get_addresses(handle: &Handle, index: u32) -> Result<(), rtnetlink::Error>{
+    let interface_addr = info::get_interface_address(&handle, index).await?;
+    let mut addresses: Vec<(Option<IpAddr>, Option<u8>)> = Vec::new();
+    let mut peers: Vec<(Option<IpAddr>, Option<u8>)> = Vec::new();
+
+    for addr in &interface_addr {
+        let ip_addr: (Option<IpAddr>, Option<u8>) = addr.address;
+        let ip_local: (Option<IpAddr>, Option<u8>) = addr.local;
+
+        if ip_addr.0.is_some() && ip_local.0.is_some() && ip_addr != ip_local {
+            // Store local address and peer's address
+            peers.push(ip_addr);
+            addresses.push(ip_local);
+        } else if ip_addr.0.is_some() && ip_local.0.is_some() && ip_addr == ip_local {
+            // Both address and local are equal (Store only one of them)
+            addresses.push(ip_addr);
+        } else if ip_addr.0.is_none() && ip_local.0.is_some() {
+            addresses.push(ip_local);
+        } else if ip_addr.0.is_some() && ip_local.0.is_none() {
+            addresses.push(ip_addr);
+        } else {
+            // Without addresses
+        }
+
+    }
+
+    println!("{:?}", addresses);
+    println!("{:?}", peers);
+
+    Ok(())
+}

@@ -1,5 +1,6 @@
 use std::net::IpAddr;
 use std::net::SocketAddr;
+use interface::addr::get_addresses;
 use netlink_packet_route::link::LinkAttribute;
 use netlink_packet_route::RouteNetlinkMessage;
 use tokio;
@@ -21,11 +22,13 @@ mod db;
 mod interface;
 mod net;
 mod errors;
+mod config;
 
 use crate::db::clickhouse;
 use crate::db::queries;
+
 use crate::db::schema;
-use crate::interface::info;
+use crate::interface::{ info, addr };
 
 #[tokio::main]
 async fn main() -> Result<(), rtnetlinkErr> {
@@ -68,35 +71,9 @@ async fn main() -> Result<(), rtnetlinkErr> {
     let result: u128 = bitAddr & mask;
     let network = Ipv6Addr::from(result);
 
-    let interface_addr = info::get_interface_address(&handle, 3).await?;
-    let mut addresses: Vec<(Option<IpAddr>, Option<u8>)> = Vec::new();
-    let mut peers: Vec<(Option<IpAddr>, Option<u8>)> = Vec::new();
-
-    for addr in &interface_addr {
-        let ip_addr: (Option<IpAddr>, Option<u8>) = addr.address;
-        let ip_local: (Option<IpAddr>, Option<u8>) = addr.local;
-
-        if ip_addr.1.is_none() && ip_local.1.is_none() {
-            // Without addresses
-        } else if ip_addr.1.is_none() && ip_local.1.is_some() {
-            addresses.push(ip_local);
-        } else if ip_addr.1.is_some() && ip_local.1.is_none() {
-            peers.push(ip_addr);
-        } else if ip_addr.1.is_some() && ip_local.1.is_some() && ip_addr != ip_local {
-            // Store local address and peer's address
-            peers.push(ip_addr);
-            addresses.push(ip_local);
-        } else {
-            // Both address and local are equal (Store only one of them)
-            addresses.push(ip_addr);
-        }
-    }
-
-    println!("{:?}", addresses);
-    println!("{:?}", peers);
 
 
-
+    get_addresses(&handle, 2).await?;
 
 
     //let interface_addr = info::get_interface_stats(&handle, 2).await?;
