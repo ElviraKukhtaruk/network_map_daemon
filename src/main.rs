@@ -1,4 +1,7 @@
 use std::net::IpAddr;
+use std::net::SocketAddr;
+use netlink_packet_route::link::LinkAttribute;
+use netlink_packet_route::RouteNetlinkMessage;
 use tokio;
 
 use ipnet::IpNet;
@@ -9,29 +12,34 @@ use std::ops::BitAnd;
 use std::ops::BitAndAssign;
 
 use rtnetlink::{new_connection, Error as rtnetlinkErr, Handle};
+use futures_channel::mpsc::UnboundedReceiver;
+use netlink_packet_core::{ NetlinkMessage };
+use netlink_sys;
+use futures::stream::StreamExt;
 
 mod db;
 mod interface;
 mod net;
+mod errors;
 
 use crate::db::clickhouse;
+use crate::db::queries;
+use crate::db::schema;
 use crate::interface::info;
-use crate::net::address;
 
 #[tokio::main]
 async fn main() -> Result<(), rtnetlinkErr> {
-    let con = clickhouse::connect().await;
 
-    let get_stat = r"
-        SELECT * FROM stat;
-    ";
+    let con = clickhouse::DbConnection::new().await;
+    let client = con.get_client().await;
 
-    let res = con.execute(get_stat).await;
 
-    match res {
-        Ok(res) => println!("{:?}", res),
-        Err(err) => panic!("Select error: {:?}", err),
-    }
+
+   // let server = queries::add_server(client, ).await;
+
+
+    //queries::add_interface(client).await;
+
 
     // Connection to a Netlink socket
     let connect = new_connection();
@@ -43,8 +51,12 @@ async fn main() -> Result<(), rtnetlinkErr> {
             // Running in the background (asynchronously)
             tokio::spawn(connection);
         }
-        Err(_) => panic!("Connection failed"),
+        Err(_) => panic!("RTNetLink Connection failed"),
     }
+
+
+
+    //println!("{:?}", messages);
 
     let addr = Ipv6Addr::new(
         0x1020, 0x3040, 0x5060, 0x7080, 0x90A0, 0xB0C0, 0xD0E0, 0xF00D,
@@ -56,22 +68,47 @@ async fn main() -> Result<(), rtnetlinkErr> {
     let result: u128 = bitAddr & mask;
     let network = Ipv6Addr::from(result);
 
-    //println!("{:?}", network);
+    let interface_addr = info::get_interface_address(&handle, 3).await?;
+    let mut addresses: Vec<(Option<IpAddr>, Option<u8>)> = Vec::new();
+    let mut peers: Vec<(Option<IpAddr>, Option<u8>)> = Vec::new();
 
-    //let g = info::get_all_ptp_interfaces(&handle).await?;
-    //let d = info::get_all_ptp_interfaces(&handle).await?;
-    //let d = info::get_all_ptp_interfaces(&handle).await?;
-    //let point_to_point = info::is_point_to_point(&handle, 2).await;
+    for addr in &interface_addr {
+        let ip_addr: (Option<IpAddr>, Option<u8>) = addr.address;
+        let ip_local: (Option<IpAddr>, Option<u8>) = addr.local;
 
-    // if let Err(err) = point_to_point {
-    //     info::err_netlink_info(err);
-    // }
-    //let interface_address = info::get_all_interfaces(&handle).await?;
-    //let interface_addr = info::get_interface_address(&handle, 8).await?;
-    let interface_addr = info::get_interface_stats(&handle, 2).await?;
+        if ip_addr.1.is_none() && ip_local.1.is_none() {
+            // Without addresses
+        } else if ip_addr.1.is_none() && ip_local.1.is_some() {
+            addresses.push(ip_local);
+        } else if ip_addr.1.is_some() && ip_local.1.is_none() {
+            peers.push(ip_addr);
+        } else if ip_addr.1.is_some() && ip_local.1.is_some() && ip_addr != ip_local {
+            // Store local address and peer's address
+            peers.push(ip_addr);
+            addresses.push(ip_local);
+        } else {
+            // Both address and local are equal (Store only one of them)
+            addresses.push(ip_addr);
+        }
+    }
+
+    println!("{:?}", addresses);
+    println!("{:?}", peers);
+
+
+
+
+
+    //let interface_addr = info::get_interface_stats(&handle, 2).await?;
 
     //address::get_network_addr(&interface_addr[2]);
-    println!("{:#?}", interface_addr);
+    /*for attr in &interface_addr[0].attributes {
+        match attr {
+            LinkAttribute::IfName(name) => println!("{:?}", name),
+            _ => ()
+        }
+        //println!("{:?}", attr);
+    }*/
 
     //let addr1 = interface_addr[0].address.as_str();
     //let pref1 = interface_addr[0].prefix_len.as_str();

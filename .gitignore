@@ -1,4 +1,6 @@
 target/
 .cargo/config.toml
 .env
-config.toml
+Config.toml
+token
+Cargo.lock

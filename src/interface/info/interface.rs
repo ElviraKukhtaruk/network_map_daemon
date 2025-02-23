@@ -1,10 +1,9 @@
 use std::net::IpAddr;
 
 #[derive(Debug)]
-pub struct IntterfaceAddr {
-    pub prefix_len: u8,
-    pub address: IpAddr,
-    pub local: IpAddr
+pub struct InterfaceAddr {
+    pub address: (Option<IpAddr>, Option<u8>),
+    pub local: (Option<IpAddr>, Option<u8>),
 }
 
 #[derive(Debug)]
@@ -14,5 +13,7 @@ pub struct Stats {
     pub tx_packets: u64,
     pub rx_packets: u64,
     pub tx_bytes: u64,
-    pub rx_bytes: u64
+    pub rx_bytes: u64,
+    pub tx_dropped: u64,
+    pub rx_dropped: u64
 }

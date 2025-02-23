@@ -5,8 +5,8 @@
     <profiles>
         <!-- Default settings. -->
 	   <default>
-		<allow_suspicious_low_cardinality_types>1</allow_suspicious_low_cardinality_types>
-            </default>
+		  <allow_suspicious_low_cardinality_types>1</allow_suspicious_low_cardinality_types>
+        </default>
 
         <!-- Profile that allows only read queries. -->
         <readonly>

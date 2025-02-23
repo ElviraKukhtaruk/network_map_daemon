@@ -1,28 +1,42 @@
-use config::{Config, File};
+use config::{Config, Environment, File};
 use klickhouse::*;
+use dotenv::dotenv;
 
-pub async fn connect() -> Client {
+pub struct DbConnection {
+    client: Client
+}
 
-    let settings = Config::builder()
-        .add_source(File::with_name("config"))
-        .build()
-        .expect("Config.toml error");
+impl DbConnection {
 
-    let options = ClientOptions {
-        username: settings.get("clickhouse.user").expect("user key is missing"),
-        password: settings.get("clickhouse.password").expect("user key for clickhouse is missing"),
-        default_database: settings.get("clickhouse.db").expect("user key for clickhouse is missing"),
-    };
+    pub async fn new() -> Self {
+        dotenv().ok();
 
-    let host: String = settings.get("clickhouse.hostname_for_app").expect("hostname_for_app key for clickhouse is missing");
-    let port: String = settings.get("clickhouse.native_port").expect("native_port key for clickhouse is missing");
+        let settings = Config::builder()
+            .add_source(File::with_name("Config").required(false))
+            .add_source(Environment::with_prefix("CLICKHOUSE"))
+            .build()
+            .expect("Configuration error");
 
-    let socket = format!("{host}:{port}");
+        let options = ClientOptions {
+            username: settings.get("user").expect("user key is missing"),
+            password: settings.get("password").expect("user key for clickhouse is missing"),
+            default_database: settings.get("db").expect("user key for clickhouse is missing"),
+        };
 
-    let client = Client::connect(socket, options).await;
+        let host: String = settings.get("hostname_for_app").expect("hostname_for_app key for clickhouse is missing");
+        let port: String = settings.get("native_port").expect("native_port key for clickhouse is missing");
 
-    match client {
-        Ok(res) => res,
-        Err(err) => panic!("Connect error: {:?}", err),
+        let socket = format!("{host}:{port}");
+
+        let client = Client::connect(socket, options).await;
+
+        match client {
+            Ok(res) => DbConnection { client: res },
+            Err(err) => panic!("Connect error: {:?}", err),
+        }
+    }
+
+    pub async fn get_client(&self) -> &Client {
+        &self.client
     }
 }
