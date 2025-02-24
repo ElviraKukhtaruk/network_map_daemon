@@ -24,7 +24,7 @@ mod net;
 mod errors;
 mod config;
 
-use crate::db::clickhouse;
+use crate::config::config:: { DbConnection, ServerConfiguration };
 use crate::db::queries;
 
 use crate::db::schema;
@@ -33,12 +33,16 @@ use crate::interface::{ info, addr };
 #[tokio::main]
 async fn main() -> Result<(), rtnetlinkErr> {
 
-    let con = clickhouse::DbConnection::new().await;
-    let client = con.get_client().await;
+    let con = DbConnection::new().await;
+    let client = con.get_client();
+
+    let a = ServerConfiguration::new(con.get_config());
+
+     println!("{:?}", a.get_config().server);
 
 
-
-   // let server = queries::add_server(client, ).await;
+    // ServerConfig::new();
+    //let server = queries::add_addr(client).await;
 
 
     //queries::add_interface(client).await;
@@ -73,8 +77,9 @@ async fn main() -> Result<(), rtnetlinkErr> {
 
 
 
-    get_addresses(&handle, 2).await?;
+//    let addrs = get_addresses(&handle, 2).await?;
 
+  //  println!("{:?}", addrs);
 
     //let interface_addr = info::get_interface_stats(&handle, 2).await?;
 
@@ -84,7 +89,7 @@ async fn main() -> Result<(), rtnetlinkErr> {
             LinkAttribute::IfName(name) => println!("{:?}", name),
             _ => ()
         }
-        //println!("{:?}", attr);
+        println!("{:?}", interface_addr);
     }*/
 
     //let addr1 = interface_addr[0].address.as_str();

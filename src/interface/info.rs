@@ -1,11 +1,11 @@
-use std::{num::NonZeroI32, net::{IpAddr}};
-use futures::StreamExt;
+use std::{num::NonZeroI32, net::{ IpAddr, Ipv4Addr, Ipv6Addr }};
 use rtnetlink::{Error as rtnetlinkErr, Handle};
+use klickhouse::Ipv6;
 
 use syscalls::{Errno as syscallErr};
 
 use netlink_packet_route::{address::AddressAttribute, link::{LinkAttribute, LinkFlag, LinkMessage}};
-use netlink_packet_route::{address::{AddressMessage, AddressAttribute::{Address, Local}}};
+use netlink_packet_route::{address::{AddressMessage, AddressAttribute::{Address, Local, Label}}};
 
 use futures_util::TryStreamExt;
 use tokio::time::interval;
@@ -114,6 +114,9 @@ pub async fn get_interface_address(handle: &Handle, index: u32) -> Result<Vec<in
         let mut address: Option<IpAddr> = None;
         let mut local: Option<IpAddr> = None;
 
+        let mut address_mapped: Option<Ipv6> = None;
+        let mut local_mapped: Option<Ipv6> = None;
+
         address_attributes.into_iter().for_each(|e| {
             match e {
                 Address(addr_peer) => address = Some(*addr_peer),
@@ -122,25 +125,27 @@ pub async fn get_interface_address(handle: &Handle, index: u32) -> Result<Vec<in
             }
         });
 
+        match address {
+            Some(IpAddr::V4(v4)) => address_mapped = Some(Ipv6(v4.to_ipv6_mapped())),
+            Some(IpAddr::V6(v6)) => address_mapped = Some(Ipv6(v6)),
+            None => ()
+        }
+
+        match local {
+            Some(IpAddr::V4(v4)) => local_mapped = Some(Ipv6(v4.to_ipv6_mapped())),
+            Some(IpAddr::V6(v6)) => local_mapped = Some(Ipv6(v6)),
+            None => ()
+        }
+
         let int_addr = interface::InterfaceAddr {
-            address: (address, Some(address_message.header.prefix_len)),
-            local: (local, Some(address_message.header.prefix_len))
+            address: (address_mapped, Some(address_message.header.prefix_len)),
+            local: (local_mapped, Some(address_message.header.prefix_len))
         };
 
         int_addresses.push(int_addr);
     }
-    if response_address.len() > 0 {
+    if response_address.len() > 0 || response_address.is_empty() {
         Ok(int_addresses)
-    } else if response_address.is_empty() {
-        let mut without_addr: Vec<interface::InterfaceAddr> = Vec::with_capacity(1);
-
-        // Interface without IP addresses
-        without_addr.push(interface::InterfaceAddr {
-            address: (None, None),
-            local: (None, None)
-        });
-
-        Ok(without_addr)
     } else {
         Err(rtnetlinkErr::RequestFailed)
     }

@@ -1,5 +1,8 @@
 use std::path::PathBuf;
 use clap::Parser;
+use serde::Serialize;
+use std::fs;
+use std::io::Write;
 
 
 #[derive(Parser)]
@@ -24,4 +27,14 @@ pub struct Cli {
 
     #[arg(short, long, value_name = "Clickhouse user")]
     pub user: Option<PathBuf>,
+}
+
+
+#[derive(Serialize)]
+pub struct ServerConfigStructure {
+    pub user: String,
+    pub password: String,
+    pub db: String,
+    pub hostname: String,
+    pub native_port: u16,
 }

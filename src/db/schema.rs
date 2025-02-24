@@ -1,4 +1,5 @@
-use klickhouse::{ DateTime, VecTuple, Ipv6 };
+use klickhouse::{ DateTime, Ipv6 };
+use std::net::Ipv6Addr;
 
 #[derive(Debug)]
 #[derive(klickhouse::Row)]
@@ -19,8 +20,8 @@ pub struct Stat {
 pub struct Addr {
     pub server_id: String,
     pub interface: String,
-    pub ipv6: VecTuple<(Option<Ipv6>, Option<u8>)>,
-    pub ipv6_peer: VecTuple<(Option<Ipv6>, Option<u8>)>
+    pub ipv6: Vec<(Option<Ipv6>, Option<u8>)>,
+    pub ipv6_peer: Vec<(Option<Ipv6>, Option<u8>)>
 }
 
 #[derive(Debug)]

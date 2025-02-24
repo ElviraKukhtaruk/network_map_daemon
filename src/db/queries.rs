@@ -24,24 +24,24 @@ pub async fn add_server(client: &Client, server: Server) -> Result<(), QueryErr>
 }
 
 
-pub async fn add_addr(client: &Client, addr: Addr) {
-   // let prefix_len = &addr.prefix_len;
-    let ipv6 = &addr.ipv6;
-    let ipv6_peer = &addr.ipv6_peer;
+pub async fn add_addr(client: &Client, addrs: Addr) -> Result<(), QueryErr> {
 
-    //if let Some(prefix) = prefix_len {
-    //    prefix.is_empty()
-    // }
-   //
+    let address = Addr {
+        server_id: addrs.server_id,
+        interface: addrs.interface,
+        ipv6: addrs.ipv6,
+        ipv6_peer: addrs.ipv6_peer
+    };
 
-
-
-    let rows = vec![addr];
+    let rows = vec![address];
 
     let address = client.insert_native_block("INSERT INTO addr FORMAT native", rows).await;
 
     match address {
-        Ok(res) => println!("{:?}", res),
-        Err(err) => panic!("Select error: {:?}", err),
+        Err(err) => {
+            eprintln!("INSERT INTO addr: {:?}", err);
+            Err(QueryErr::KlickhouseError)
+        }
+        Ok(_) => Ok(())
     }
 }
