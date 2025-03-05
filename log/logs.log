@@ -1,0 +1,225 @@
+2025-03-04 21:07:06 - INFO: fff
+2025-03-04 22:41:39 - INFO: Checking if the server exists in database...
+2025-03-04 22:41:39 - INFO: Server was added to database!
+2025-03-04 22:41:43 - INFO: Checking if the server exists in database...
+2025-03-04 22:41:44 - ERROR: SELECT * FREOM server: deserialize error for column label: unexpected type: Nullable(String)
+2025-03-04 22:41:44 - WARN: Server with the same ID already exists, skipping.
+2025-03-04 22:43:56 - INFO: Checking if server with ID lolol exists in the database...
+2025-03-04 22:43:56 - ERROR: SELECT server_id FROM server: missing field hostname
+2025-03-04 22:43:56 - WARN: Server with the same ID already exists, skipping.
+2025-03-04 22:46:41 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-04 22:47:32 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-04 22:51:55 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-04 22:51:55 - INFO: Server was added to database!
+2025-03-04 22:51:58 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-04 23:38:46 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-04 23:38:46 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:43:17 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:43:17 - INFO: Server configuration is valid
+2025-03-05 14:43:17 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:43:17 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:47:48 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:47:48 - INFO: Server configuration is valid
+2025-03-05 14:47:48 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:47:48 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:49:38 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:49:38 - INFO: Server configuration is valid
+2025-03-05 14:49:38 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:49:38 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:50:12 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:50:12 - INFO: Server configuration is valid
+2025-03-05 14:50:12 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:50:12 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:53:00 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:53:00 - INFO: Server configuration is valid
+2025-03-05 14:53:00 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:53:00 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:53:53 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:53:53 - INFO: Server configuration is valid
+2025-03-05 14:53:53 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:53:53 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:54:06 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:54:06 - INFO: Server configuration is valid
+2025-03-05 14:54:06 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:54:06 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:54:16 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:54:16 - INFO: Server configuration is valid
+2025-03-05 14:54:16 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:54:16 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:54:57 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:54:57 - INFO: Server configuration is valid
+2025-03-05 14:54:57 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:54:57 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:55:08 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:55:08 - INFO: Server configuration is valid
+2025-03-05 14:55:08 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:55:08 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:55:16 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:55:16 - INFO: Server configuration is valid
+2025-03-05 14:55:16 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:55:16 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:55:52 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:55:52 - INFO: Server configuration is valid
+2025-03-05 14:55:52 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:55:52 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:56:13 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:56:13 - INFO: Server configuration is valid
+2025-03-05 14:56:13 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:56:13 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:56:28 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:56:28 - INFO: Server configuration is valid
+2025-03-05 14:56:28 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:56:28 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:56:52 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:56:52 - INFO: Server configuration is valid
+2025-03-05 14:56:52 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:56:52 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:57:12 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:57:12 - INFO: Server configuration is valid
+2025-03-05 14:57:12 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:57:12 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:57:47 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:57:47 - INFO: Server configuration is valid
+2025-03-05 14:57:47 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:57:47 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:59:11 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:59:11 - INFO: Server configuration is valid
+2025-03-05 14:59:11 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:59:11 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:59:30 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 14:59:30 - INFO: Server configuration is valid
+2025-03-05 14:59:30 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 14:59:30 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 14:59:30 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 14:59:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 14:59:32 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 14:59:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 14:59:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 15:01:31 - INFO: Server configuration is valid
+2025-03-05 15:01:31 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 15:01:31 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:31 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:32 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:32 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:32 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:32 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:32 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:33 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:34 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:35 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:36 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:37 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:37 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:37 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:37 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:37 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:37 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:37 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:37 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:37 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:37 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:37 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:38 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:38 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:38 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:38 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:38 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:38 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:38 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:38 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:38 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:38 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:01:38 - WARN: interface_filter not specified, scanning all available interfaces (exclude loopback).
+2025-03-05 15:02:37 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 15:02:37 - INFO: Server configuration is valid
+2025-03-05 15:02:37 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 15:02:37 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 15:03:43 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 15:03:43 - INFO: Server configuration is valid
+2025-03-05 15:03:43 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 15:03:43 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 15:06:40 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 15:06:40 - INFO: Server configuration is valid
+2025-03-05 15:06:40 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 15:06:40 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 15:35:12 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 15:35:12 - INFO: Server configuration is valid
+2025-03-05 15:35:12 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 15:35:12 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 15:37:30 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 15:37:30 - INFO: Server configuration is valid
+2025-03-05 15:37:30 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 15:37:30 - WARN: Server with the same ID already exists, skipping.
+2025-03-05 15:39:09 - INFO: Connected to clickhouse: localhost:9000
+2025-03-05 15:39:09 - INFO: Server configuration is valid
+2025-03-05 15:39:09 - INFO: Checking if server with ID 'lolol' exists in the database...
+2025-03-05 15:39:09 - WARN: Server with the same ID already exists, skipping.

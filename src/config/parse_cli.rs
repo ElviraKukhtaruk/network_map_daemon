@@ -3,9 +3,10 @@ use clap::Parser;
 use serde::Serialize;
 use std::fs;
 use std::io::Write;
+use std::fmt;
 
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
     /// Set custom path to the configuration file [./Config.toml default]
@@ -27,8 +28,35 @@ pub struct Cli {
 
     #[arg(short, long, value_name = "Clickhouse user")]
     pub user: Option<PathBuf>,
-}
 
+    /// [/etc/machine-id default, generate random if not provided]
+    #[arg(long, value_name = "Server ID")]
+    pub server_id: Option<String>,
+
+    /// [/etc/hostname default]
+    #[arg(long, value_name = "Server hostname")]
+    pub hostname: Option<String>,
+
+    #[arg(long, value_name = "Server label")]
+    pub label: Option<String>,
+
+    /// Scan defined interface names (Regex supported): --interface_filter eth0, eth1
+    #[arg(long, value_delimiter = ',', value_name = "Server interface filter")]
+    pub interface_filter: Vec<Option<String>>,
+
+    #[arg(long, value_name = "Server country location")]
+    pub country: Option<String>,
+
+    #[arg(long, value_name = "Server city location")]
+    pub city: Option<String>,
+
+    #[arg(long, value_name = "Server lat")]
+    pub lat: Option<f64>,
+
+    #[arg(long, value_name = "Server lng")]
+    pub lng: Option<f64>,
+
+}
 
 #[derive(Serialize)]
 pub struct ServerConfigStructure {

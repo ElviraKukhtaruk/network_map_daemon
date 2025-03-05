@@ -1,13 +1,14 @@
+use std::process;
+
 use config::{Config, Environment, File};
+use log::{info, error, warn};
 use klickhouse::*;
 use dotenv::dotenv;
-use crate::config::pattern;
+use crate::config::parse_cli;
+use crate::db::schema::Server;
 use clap::Parser;
-use std::{fs, io::Read};
-use rand::{self, RngCore};
-use hex;
-use toml;
-use crate::config::parse::{ ServerConfig, Server };
+use crate::config::{ config_file, cli };
+use super::get_server_info::{get_hostname, get_machine_id};
 
 pub struct DbConnection {
     client: Client,
@@ -17,36 +18,7 @@ pub struct DbConnection {
 
 #[derive(Debug)]
 pub struct ServerConfiguration {
-    config: ServerConfig
-}
-
-fn get_hostname(hostname: Option<String>) -> String {
-    match hostname {
-        Some(hostname) => hostname,
-        None => {
-            let hostname = fs::read_to_string("/etc/hostname")
-                .map(|s| s.trim().to_string())
-                .unwrap_or_else(|err| {
-                    panic!("Can't get hostname from: /etc/hostname: {}", err)
-            });
-            hostname
-        }
-    }
-}
-
-fn get_machine_id(machine_id: Option<String>) -> String {
-
-    let machine_id = machine_id.or_else(|| {
-        fs::read_to_string("/etc/machine-id")
-        .map(|s| s.trim().to_string())
-        .inspect_err(|err| eprintln!("Can't get machine-id from /etc/machine-id: {}. Generating new one.", err))
-        .ok()
-    }).unwrap_or_else(|| {
-        let mut bytes = [0u8; 16];
-        rand::rng().fill_bytes(&mut bytes);
-        hex::encode(bytes)
-    });
-    machine_id
+    config: Server
 }
 
 
@@ -55,7 +27,7 @@ impl DbConnection {
     pub async fn new() -> Self {
         dotenv().ok();
 
-        let cli = pattern::Cli::parse();
+        let cli = parse_cli::Cli::parse();
 
         let mut config_file = String::from("Config.toml");
 
@@ -64,23 +36,36 @@ impl DbConnection {
             config_file = config.display().to_string();
         }
 
-        let settings = Config::builder()
+        let mut settings = Config::builder()
             .add_source(File::with_name(config_file.as_str()).required(false))
             .add_source(Environment::with_prefix("CLICKHOUSE").keep_prefix(true).separator("_"))
-            .set_default("clickhouse.native_port", 9000.to_string()).expect("Configuration error")
-            .set_default("config_path", config_file).expect("Configuration error")
-            .set_override_option("clickhouse.user", cli.user.as_deref().map(|p| p.to_string_lossy().into_owned())).expect("Configuration error")
-            .set_override_option("clickhouse.password", cli.password.as_deref()).expect("Configuration error")
-            .set_override_option("clickhouse.db", cli.db.as_deref()).expect("Configuration error")
-            .set_override_option("clickhouse.hostname", cli.servername.as_deref()).expect("Configuration error")
-            .set_override_option("clickhouse.native_port", cli.native_port);
+            .set_default("clickhouse.native_port", "9000").unwrap_or_else(|err| {
+                error!("Configuration error: {}", err);
+                process::exit(1);
+            })
+            .set_default("config_path", config_file).unwrap_or_else(|err| {
+                error!("Configuration error: {}", err);
+                process::exit(1);
+            });
 
+        let override_options = [
+            ("clickhouse.user", cli.user.as_deref().map(|p| p.to_string_lossy().into())),
+            ("clickhouse.password", cli.password),
+            ("clickhouse.db", cli.db),
+            ("clickhouse.hostname", cli.servername),
+            ("clickhouse.native_port", cli.native_port.map(|p| p.to_string())),
+        ];
 
-        let config = if let Ok(builder) = settings {
-            builder.build().expect("Configuration error")
-        } else {
-            panic!("Configuration error");
-        };
+        for (key, value) in override_options {
+            settings = settings.set_override_option(key, value).unwrap_or_else(|err| {
+                error!("Configuration error: {}", err);
+                process::exit(1);
+            });
+        }
+        let config = settings.build().unwrap_or_else(|err| {
+            error!("Configuration error: {}", err);
+            process::exit(1);
+        });
 
         let options = ClientOptions {
             username: config.get("clickhouse.user").expect("user key is missing"),
@@ -93,11 +78,17 @@ impl DbConnection {
 
         let socket = format!("{host}:{port}");
 
-        let client = Client::connect(socket, options).await;
+        let client = Client::connect(&socket, options).await;
 
         match client {
-            Ok(res) => DbConnection { client: res, config },
-            Err(err) => panic!("Connect error: {:?}", err),
+            Ok(res) => {
+                info!("Connected to clickhouse: {}", &socket);
+                DbConnection { client: res, config }
+            },
+            Err(err) => {
+                error!("Connect error: {:?}", err);
+                process::exit(1);
+            }
         }
 
     }
@@ -115,62 +106,37 @@ impl DbConnection {
 impl ServerConfiguration {
 
     pub fn new(config: &Config) -> Self {
+        let config_file_params = config_file::get_parameters_from_config_file(config);
+        let cli_params = cli::get_parameters_from_cli();
+        let mut config_server = config_file_params.and_then(|cfg| cfg.server);
 
-        let conf_file = config.get_string("config_path").expect("Config path not specified!");
+        let machine_id = config_server.as_mut().and_then(|s| s.server_id.take());
+        let hostname = config_server.as_mut().and_then(|s| s.hostname.take());
 
-        // Check if the file exists
-        let mut config_string = String::new();
-        let config_exists = fs::metadata(conf_file.as_str()).is_ok();
-
-        if config_exists {
-            // Read the existing file
-            let mut file = fs::OpenOptions::new().read(true).open(conf_file.as_str()).unwrap_or_else(|err| {
-                panic!("Error occured while opening config file: {}", err);
-            });
-            file.read_to_string(&mut config_string).unwrap_or_else(|err| {
-                panic!("Error while reading config file: {}", err);
-            });
-
-            // Parse existing TOML
-            let config_toml: Result<ServerConfig, toml::de::Error> = toml::from_str(&config_string.as_str());
-
-            match config_toml {
-                Ok(res) => {
-
-                    let hostname = get_hostname(res.server.hostname);
-
-                    let machine_id = get_machine_id(res.server.server_id);
-
-                   let final_config = ServerConfig {
-                        clickhouse: res.clickhouse,
-                        server: Server {
-                            server_id: Some(machine_id),
-                            hostname: Some(hostname),
-                            label: res.server.label,
-                            lat: res.server.lat,
-                            lng: res.server.lng,
-                            city: res.server.city,
-                            country: res.server.country
-                        }
-                    };
-                    let updated_toml = toml::to_string_pretty(&final_config).unwrap_or_else(|err| {
-                        panic!("Failed to generate server_id and hostname for configuration file: {}", err);
-                    });
-
-                    fs::write(conf_file, updated_toml).unwrap_or_else(|err| {
-                        panic!("Failed to generate server_id and hostname for configuration file: {}", err);
-                    });
-
-                    ServerConfiguration { config: final_config }
-                },
-                Err(e) => panic!("Configuration error: {:?}", e.message())
-            }
+        let interface_filter = if !cli_params.interface_filter.is_empty() {
+            cli_params.interface_filter
         } else {
-            panic!("Configuration file is missing: {}", conf_file);
-        }
+            config_server
+                .as_mut()
+                .map(|s| std::mem::take(&mut s.interface_filter))
+                .unwrap_or_else(Vec::new)
+        };
+
+        let server = Server {
+            server_id: cli_params.server_id.unwrap_or_else(|| get_machine_id(machine_id)),
+            hostname: cli_params.hostname.or_else(|| get_hostname(hostname)).expect("Missing parameter: hostname"),
+            label: cli_params.label.or_else(|| config_server.as_mut().and_then(|s| s.label.take())).expect("Missing parameter: label"),
+            interface_filter,
+            country: cli_params.country.or_else(|| config_server.as_mut().and_then(|s| s.country.take())),
+            city: cli_params.city.or_else(|| config_server.as_mut().and_then(|s| s.city.take())),
+            lat: cli_params.lat.or_else(|| config_server.as_mut().and_then(|s| s.lat.take())).expect("Missing parameter: lat"),
+            lng: cli_params.lng.or_else(|| config_server.as_mut().and_then(|s| s.lng.take())).expect("Missing parameter: lng"),
+        };
+        info!("Server configuration is valid");
+        ServerConfiguration { config: server }
     }
 
-    pub fn get_config(&self) -> &ServerConfig {
+    pub fn get_config(&self) -> &Server {
         &self.config
     }
 }

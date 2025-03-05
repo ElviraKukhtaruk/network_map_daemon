@@ -1,0 +1,15 @@
+appenders:
+  stdout:
+    kind: console
+    encoder:
+      pattern: "{h({d(%Y-%m-%d %H:%M:%S)(utc)} - {l}: {m}{n})}"
+  file_logger:
+    kind: file
+    path: "log/logs.log"
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)(utc)} - {h({l})}: {m}{n}"
+root:
+  level: info
+  appenders:
+    - stdout
+    - file_logger

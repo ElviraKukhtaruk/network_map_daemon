@@ -1,7 +1,6 @@
-use klickhouse::{ DateTime, Ipv6 };
-use std::net::Ipv6Addr;
+use klickhouse::{DateTime, Ipv6};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[derive(klickhouse::Row)]
 pub struct Stat {
     pub server_id: String,
@@ -15,7 +14,7 @@ pub struct Stat {
     pub tx_d: u64
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[derive(klickhouse::Row)]
 pub struct Addr {
     pub server_id: String,
@@ -24,14 +23,15 @@ pub struct Addr {
     pub ipv6_peer: Vec<(Option<Ipv6>, Option<u8>)>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[derive(klickhouse::Row)]
 pub struct Server {
     pub server_id: String,
     pub hostname: String,
-    pub icao: Option<String>,
-    pub lat: Option<f64>,
-    pub lng: Option<f64>,
+    pub label: String,
+    pub lat: f64,
+    pub lng: f64,
+    pub interface_filter: Vec<Option<String>>,
     pub city: Option<String>,
     pub country: Option<String>
 }
