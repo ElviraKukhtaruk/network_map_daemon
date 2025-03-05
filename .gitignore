@@ -5,3 +5,4 @@ Config.toml
 token
 Cargo.lock
 pozn.txt
+log/
