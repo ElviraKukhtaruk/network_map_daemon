@@ -1,7 +1,7 @@
 use std::fs;
 use clap::Parser;
 use config::Config;
-use log::{info, error, warn};
+use log::error;
 
 use super::{parse_cli, parse_config::{ Server, ServerConfig }};
 use crate::config::get_server_info::{ get_hostname, get_machine_id };
@@ -9,14 +9,14 @@ use crate::config::get_server_info::{ get_hostname, get_machine_id };
 pub fn read_file(config_path: &str) -> Option<ServerConfig> {
     // Read the existing file
     let content = fs::read_to_string(config_path).inspect_err(|err| {
-        error!("Error occured while reading config file: {}", err);
+        error!("An error occured while reading config file: {}", err);
     }).ok()?;
     let config_toml: Result<ServerConfig, toml::de::Error> = toml::from_str(&content);
 
     match config_toml {
         Ok(content) => Some(content),
         Err(err) =>{
-            error!("Error occured while reading config file: {}", err);
+            error!("An error occured while reading config file: {}", err);
             None
         }
     }
@@ -70,7 +70,7 @@ pub fn get_parameters_from_config_file(config: &Config) -> Option<ServerConfig> 
             if let Ok(toml) = updated_toml {
                 fs::write(conf_file, toml).inspect_err(|err| {
                     error!("Failed to write updated TOML string to the configuration file: {}", err);
-                });
+                }).ok();
             }
             return Some(final_config);
         } else {

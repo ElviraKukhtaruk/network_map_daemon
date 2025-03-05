@@ -1,6 +1,6 @@
 use std::fs;
 use rand::{self, RngCore};
-use log::{info, warn, error};
+use log::error;
 
 pub fn get_hostname(hostname: Option<String>) -> Option<String> {
 

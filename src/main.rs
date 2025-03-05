@@ -1,13 +1,13 @@
 use std::process;
+use interface::get_address::add_interface_addresses;
 use interface::get_stats::save_stats_every_second;
-use log::{info, error, warn};
+use log::error;
 use tokio;
 
 use rtnetlink::{new_connection, Error as rtnetlinkErr, Handle};
 
 mod db;
 mod interface;
-mod net;
 mod errors;
 mod config;
 
@@ -42,6 +42,9 @@ async fn main() -> Result<(), rtnetlinkErr> {
         }
         Err(_) => panic!("RTNetLink Connection failed"),
     }
+
+    add_interface_addresses(&handle, client, &server_config.get_config().interface_filter, &server_config).await
+        .inspect_err(|e| error!("An error occurred while getting addresses: {}", e)).ok();
 
     save_stats_every_second(&handle, &server_config, client).await;
     Ok(())

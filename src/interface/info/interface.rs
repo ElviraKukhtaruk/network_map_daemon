@@ -16,13 +16,3 @@ pub struct Stats {
     pub tx_dropped: u64,
     pub rx_dropped: u64
 }
-
-#[derive(Debug)]
-pub struct StatsCountData {
-    pub tx_packets: u64,
-    pub rx_packets: u64,
-    pub tx_bytes: u64,
-    pub rx_bytes: u64,
-    pub tx_dropped: u64,
-    pub rx_dropped: u64
-}

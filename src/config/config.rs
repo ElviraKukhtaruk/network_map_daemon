@@ -1,7 +1,7 @@
 use std::process;
 
 use config::{Config, Environment, File};
-use log::{info, error, warn};
+use log::{info, error};
 use klickhouse::*;
 use dotenv::dotenv;
 use crate::config::parse_cli;

@@ -1,8 +1,6 @@
-use std::{num::NonZeroI32, net::IpAddr};
-use log::error;
+use std::net::IpAddr;
 use rtnetlink::{Error as rtnetlinkErr, Handle};
 use klickhouse::Ipv6;
-use syscalls::Errno as syscallErr;
 use netlink_packet_route::link::{ LinkAttribute, LinkFlag, LinkHeader, LinkMessage };
 use netlink_packet_route::address::{ AddressMessage, AddressAttribute::{ Address, Local }};
 
@@ -16,19 +14,6 @@ pub async fn get_all_interfaces(handle: &Handle) -> Result<Vec<LinkMessage>, rtn
 
     let response_link = stream.try_collect::<Vec<LinkMessage>>().await?;
     Ok(response_link)
-}
-
-pub async fn get_all_ptp_interfaces(handle: &Handle) -> Result<Vec<LinkMessage>, rtnetlinkErr> {
-    let response_link = get_all_interfaces(handle).await?;
-
-    let response_link_pointopoint: Vec<_> = response_link.clone().into_iter().filter(|e| {
-        return e.header.flags.clone().into_iter().any(|flag| match flag {
-            LinkFlag::Pointopoint => true,
-            _ => false
-        });
-    }).collect();
-
-    Ok(response_link_pointopoint)
 }
 
 pub async fn get_interface_status(handle: &Handle, name: &String) -> Result<bool, rtnetlinkErr> {
@@ -70,18 +55,6 @@ pub async fn get_interface(handle: &Handle, name: &String) -> Result<LinkMessage
 
     if let Some(link) = response_link { return Ok(link); }
     Err(rtnetlinkErr::RequestFailed)
-}
-
-pub fn err_netlink_info(error: rtnetlinkErr) {
-    match error {
-        rtnetlinkErr::NetlinkError(err_message) => {
-            if let Some(code) = err_message.code {
-                let code: i32 = NonZeroI32::abs(code).get();
-                error!("{:?}", syscallErr::name_and_description(&syscallErr::new(code)));
-            }
-        },
-        _ => ()
-    }
 }
 
 pub async fn get_index_by_name(handle: &Handle, name: &String) -> Result<u32, rtnetlinkErr> {

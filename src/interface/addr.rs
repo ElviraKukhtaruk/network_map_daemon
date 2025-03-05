@@ -1,11 +1,11 @@
 use rtnetlink::Handle;
 use klickhouse:: Ipv6;
-use crate::db::schema::Addr;
+use crate::{config::config::ServerConfiguration, db::schema::Addr};
 use log::{info, warn};
 
 use crate::interface::info;
 
-pub async fn get_addresses(handle: &Handle, name: String) -> Result<Addr, rtnetlink::Error> {
+pub async fn get_addresses(handle: &Handle, name: String, config: &ServerConfiguration) -> Result<Addr, rtnetlink::Error> {
     let interface_addr = info::get_interface_address(&handle, &name).await?;
     let mut addresses: Vec<(Option<Ipv6>, Option<u8>)> = Vec::new();
     let mut peers: Vec<(Option<Ipv6>, Option<u8>)> = Vec::new();
@@ -28,10 +28,10 @@ pub async fn get_addresses(handle: &Handle, name: String) -> Result<Addr, rtnetl
             info!("{name}: Address {print_addr}");
             addresses.push(ip_addr);
         } else if ip_addr.0.is_none() && ip_local.0.is_some() {
-            info!("{name}: Address address {print_local}");
+            info!("{name}: Address {print_local}");
             addresses.push(ip_local);
         } else if ip_addr.0.is_some() && ip_local.0.is_none() {
-            info!("{name}: Address address {print_addr}");
+            info!("{name}: Address {print_addr}");
             addresses.push(ip_addr);
         } else {
             // Without addresses
@@ -42,8 +42,8 @@ pub async fn get_addresses(handle: &Handle, name: String) -> Result<Addr, rtnetl
     }
 
     Ok(Addr {
-        server_id: "Haha".to_string(),
-        interface: "Int".to_string(),
+        server_id: config.get_config().server_id.to_string(),
+        interface: name,
         ipv6: addresses,
         ipv6_peer: peers
     })

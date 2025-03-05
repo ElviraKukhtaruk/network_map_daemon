@@ -1,7 +1,18 @@
 [clickhouse]
-password = ""
-db = ""
-user = ""
+hostname = "hostname"
+user = "user"
+password = "p@s$$w0rd"
+db = "db"
 http_port = 8443
 native_port = 9000
-hostname = ""
+
+[server]
+label = "PRG"
+interface_filter = [
+    "wlp1s0",
+    "br-0412851f765d",
+    "vethaaefccc",
+    "br-a1f1d8e9a2d1",
+]
+lat = 50.0833
+lng = 14.4667

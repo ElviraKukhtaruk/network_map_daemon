@@ -1,54 +1,55 @@
-use log::{warn, error};
+use futures::StreamExt;
 use klickhouse::*;
 use regex::Regex;
-use rtnetlink::{Error, Handle};
+use rtnetlink::Handle;
 use crate::{config::config::ServerConfiguration, db::queries::add_addr};
-use crate::schema::Addr;
 
 use super::{addr::get_addresses, info::{get_all_interfaces, get_interface_name_from_attribute, get_loopback_from_header}};
 
-pub async fn filter_interfaces(client: &Client, handle: &Handle, rules: &Vec<Option<String>>) -> Result<Option<Addr>, Error> {
+
+pub async fn add_interface_addresses(
+    handle: &Handle,
+    client: &Client,
+    rules: &Vec<Option<String>>,
+    config: &ServerConfiguration) -> Result<(), rtnetlink::Error> {
+
+    // Precompile regexes from rules once (if they exist).
+    let compiled_rules: Vec<Option<Regex>> = rules.iter().map(|rule_opt| {
+        rule_opt.as_ref().and_then(|pattern| Regex::new(pattern).ok())
+    }).collect();
+
+    // Get all interfaces.
     let interfaces = get_all_interfaces(handle).await?;
-    let filter_rules = rules.iter().all(|e| e.is_some());
 
-    if !filter_rules {
-        warn!("interface_filter not specified, scanning all available interfaces (exclude loopback).");
-    }
+    // Process interfaces concurrently, limiting concurrency.
+    let max_concurrent = 10;
+    futures::stream::iter(interfaces)
+        .for_each_concurrent(max_concurrent, |interface| {
+            let handle = handle;
+            let client = client;
+            let config = config;
+            let compiled_rules = &compiled_rules;
+            async move {
+                let int_name = get_interface_name_from_attribute(interface.attributes);
+                let is_loopback = get_loopback_from_header(interface.header);
 
+                if let Some(name) = int_name.as_ref() {
+                    let interface_name_match = compiled_rules.iter().any(|opt_regex| {
+                        if let Some(regex) = opt_regex {
+                            regex.is_match(name)
+                        } else {
+                            // Rule is None and interface is not loopback, allow it.
+                            !is_loopback
+                        }
+                    });
 
-    for interface in interfaces {
-        let int_name = get_interface_name_from_attribute(interface.attributes);
-        let is_loopback = get_loopback_from_header(interface.header);
-
-        if let Some(name) = int_name.as_ref() {
-            // Match interface name with regex string
-            let interface_name_match = rules.iter().any(|s| {
-                s.as_ref().map_or_else(|| {
-                    if !is_loopback {
-                        return true;
+                    if interface_name_match && !is_loopback {
+                        if let Ok(addr) = get_addresses(&handle, name.into(), &config).await {
+                            add_addr(client, addr).await.ok();
+                        }
                     }
-                    false
-                }, |result| {
-                    Regex::new(result.as_str()).map_or_else(|err| {
-                        error!("Error occurred while creating regex for pattern '{result}': {}", err);
-                        false
-                    }, |regex| regex.is_match(name))
-                })
-            });
-
-            if interface_name_match && !is_loopback {
-                let addrs = get_addresses(handle, name.into()).await.ok();
-                return Ok(addrs);
+                }
             }
-        }
-    }
-    Ok(None)
-}
-
-pub async fn save_addresses(handle: &Handle, server_config: &ServerConfiguration, client: &Client) {
-
-    let addresses = filter_interfaces(&client, &handle, &server_config.get_config().interface_filter).await
-        .inspect_err(|err| error!("Failed to get interfaces stats: {}", err));
-
-
+        }).await;
+    Ok(())
 }

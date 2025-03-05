@@ -1,6 +1,6 @@
-use log::{info, error, warn};
+use log::error;
 use klickhouse::{Client, DateTime};
-use rtnetlink::{Error, Handle};
+use rtnetlink::Handle;
 use regex::Regex;
 use tokio::time::{interval, Duration};
 use crate::config::config::ServerConfiguration;
@@ -8,6 +8,8 @@ use crate::queries::add_stat;
 use std::{collections::HashMap, time::{SystemTime, UNIX_EPOCH}};
 use crate::db::schema::Stat;
 use super::info::{get_all_interfaces, get_interface_name_from_attribute, get_interface_stats, get_loopback_from_header};
+use futures::stream::StreamExt;
+use std::sync::Arc;
 
 pub async fn get_stats(handle: &Handle, name: &String, config: &ServerConfiguration) -> Option<Stat> {
     let stats = get_interface_stats(handle, name).await.inspect_err(|err| error!("Failed to get stats: {}", err));
@@ -33,112 +35,107 @@ pub async fn get_stats(handle: &Handle, name: &String, config: &ServerConfigurat
     None
 }
 
+pub async fn save_stats_every_second(
+    handle: &Handle,
+    server_config: &ServerConfiguration,
+    client: &Client) {
+
+    let mut interval = interval(Duration::from_secs(1));
+
+    // For concurrent updates.
+    let last_stats = Arc::new(tokio::sync::Mutex::new(HashMap::<String, Option<Stat>>::new()));
+
+    loop {
+        interval.tick().await;
+        // Calling filter_interfaces concurrently.
+        if let Err(e) = filter_interfaces(handle, client, &server_config.get_config().interface_filter, server_config, Arc::clone(&last_stats)).await {
+            error!("Failed to save interfaces stats: {}", e);
+        }
+    }
+}
 
 pub async fn filter_interfaces(
     handle: &Handle,
     client: &Client,
     rules: &Vec<Option<String>>,
     config: &ServerConfiguration,
-    last_data: &mut HashMap<std::string::String, std::option::Option<Stat>>,
-) -> Result<(), Error> {
+    last_stats: Arc<tokio::sync::Mutex<HashMap<String, Option<Stat>>>>) -> Result<(), rtnetlink::Error> {
 
+    // Precompile regexes from rules once (if they exist).
+    let compiled_rules: Vec<Option<Regex>> = rules.iter().map(|rule_opt| {
+        rule_opt.as_ref().and_then(|pattern| Regex::new(pattern).ok())
+    }).collect();
+
+    // Get all interfaces.
     let interfaces = get_all_interfaces(handle).await?;
 
-    for interface in interfaces {
-        let int_name = get_interface_name_from_attribute(interface.attributes);
-        let is_loopback = get_loopback_from_header(interface.header);
+    // Process interfaces concurrently, limiting concurrency.
+    let max_concurrent = 10;
+    futures::stream::iter(interfaces)
+        .for_each_concurrent(max_concurrent, |interface| {
+            let handle = handle;
+            let client = client;
+            let config = config;
+            let compiled_rules = &compiled_rules;
+            let last_stats = Arc::clone(&last_stats);
+            async move {
+                let int_name = get_interface_name_from_attribute(interface.attributes);
+                let is_loopback = get_loopback_from_header(interface.header);
 
-        if let Some(name) = int_name.as_ref() {
-            // Match interface name with regex string
-            let interface_name_match = rules.iter().any(|s| {
-                s.as_ref().map_or_else(|| {
-                    if !is_loopback {
-                        return true;
+                if let Some(name) = int_name.as_ref() {
+                    let interface_name_match = compiled_rules.iter().any(|opt_regex| {
+                        if let Some(regex) = opt_regex {
+                            regex.is_match(name)
+                        } else {
+                            // Rule is None and interface is not loopback, allow it.
+                            !is_loopback
+                        }
+                    });
+
+                    if interface_name_match && !is_loopback {
+                        if let Some(stats) = get_stats(&handle, name, &config).await {
+                            save_stat(&client, Arc::clone(&last_stats), Some(stats)).await;
+                        }
                     }
-                    false
-                }, |result| {
-                    Regex::new(result.as_str()).map_or_else(|err| {
-                        error!("Error occurred while creating regex for pattern '{result}': {}", err);
-                        false
-                    }, |regex| regex.is_match(name))
-                })
-            });
-
-            if interface_name_match && !is_loopback {
-                let stats = get_stats(handle, name.into(), config).await;
-                save_stat(client, last_data, stats).await;
-            } else if rules.len() == 0 && !is_loopback {
-                let stats = get_stats(handle, name.into(), config).await;
-                save_stat(client, last_data, stats).await;
+                }
             }
-        }
-    }
+        }).await;
+
     Ok(())
 }
 
 pub async fn save_stat(
     client: &Client,
-    last_data: &mut HashMap<std::string::String, std::option::Option<Stat>>,
-    stats: Option<Stat> ) {
+    last_stats: Arc<tokio::sync::Mutex<HashMap<String, Option<Stat>>>>,
+    stats: Option<Stat>) {
 
-        match stats {
-            Some(curr_stat) => {
+    if let Some(curr_stat) = stats {
+        let server_id = curr_stat.server_id.as_str();
+        let interface = curr_stat.interface.as_str();
 
-                let server_id = curr_stat.server_id.as_str();
-                let interface = curr_stat.interface.as_str();
+        {
+            // Lock the last_stats map to read/update the previous data.
+            let mut last_data = last_stats.lock().await;
+            if let Some(Some(old_data)) = last_data.get(interface) {
+                let old_time = old_data.timestamp.1;
+                let dt = (curr_stat.timestamp.1 - old_time) as u64;
 
-                if let Some(Some(old_data)) = &last_data.get(&curr_stat.interface) {
-                    let old_time = old_data.timestamp.1;
-                    let dt = (curr_stat.timestamp.1 - old_time) as u64;
-
-                    println!("[{interface}] {:?} - {:?} = {:?}", curr_stat.tx, old_data.tx, (curr_stat.tx - old_data.tx));
-                    add_stat(client, Stat {
-                        server_id: server_id.into(),
-                        interface: interface.into(),
-                        timestamp: curr_stat.timestamp,
-                        tx_p: (curr_stat.tx_p - old_data.tx_p) / dt,
-                        rx_p: (curr_stat.rx_p - old_data.rx_p) / dt,
-                        tx: ((curr_stat.tx - old_data.tx) * 8) / dt,
-                        rx: ((curr_stat.rx - old_data.rx) * 8) / dt,
-                        tx_d: (curr_stat.tx_d - old_data.tx_d) / dt,
-                        rx_d: (curr_stat.rx_d - old_data.rx_d) / dt
-                    }).await.ok();
-                }
-
-                last_data.insert(interface.into(), Some(Stat {
-                    server_id: curr_stat.server_id,
+                println!("[{interface}] {:?} - {:?} = {:?}", curr_stat.tx, old_data.tx, (curr_stat.tx - old_data.tx));
+                add_stat(client, Stat {
+                    server_id: server_id.into(),
                     interface: interface.into(),
                     timestamp: curr_stat.timestamp,
-                    tx_p: curr_stat.tx_p,
-                    rx_p: curr_stat.rx_p,
-                    tx: curr_stat.tx,
-                    rx: curr_stat.rx,
-                    tx_d: curr_stat.tx_d,
-                    rx_d: curr_stat.rx_d
-                }));
+                    tx_p: (curr_stat.tx_p - old_data.tx_p) / dt,
+                    rx_p: (curr_stat.rx_p - old_data.rx_p) / dt,
+                    tx: ((curr_stat.tx - old_data.tx) * 8) / dt,
+                    rx: ((curr_stat.rx - old_data.rx) * 8) / dt,
+                    tx_d: (curr_stat.tx_d - old_data.tx_d) / dt,
+                    rx_d: (curr_stat.rx_d - old_data.rx_d) / dt,
+                }).await.ok();
+            }
 
-            },
-            None => ()
+            // Update the last_stats for this interface.
+            last_data.insert(interface.into(), Some(curr_stat));
         }
-
-
-
-}
-
-pub async fn save_stats_every_second(handle: &Handle, server_config: &ServerConfiguration, client: &Client) {
-    let mut interval = interval(Duration::from_secs(1));
-    let mut last_stats: HashMap<String, Option<Stat>> = HashMap::new();
-
-    loop {
-        interval.tick().await;
-
-        filter_interfaces(
-            &handle,
-            &client,
-            &server_config.get_config().interface_filter,
-            server_config,
-            &mut last_stats
-        ).await.inspect_err(|err| error!("Failed to save interfaces stats: {}", err)).ok();
-
     }
 }
