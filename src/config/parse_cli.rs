@@ -14,8 +14,8 @@ pub struct Cli {
     pub servername: Option<String>,
 
     /// [9000 default]
-    #[arg(short, long, value_name = "Clickhouse native port")]
-    pub native_port: Option<u16>,
+    #[arg(long, value_name = "Clickhouse native port")]
+    pub port: Option<u16>,
 
     #[arg(short, long, value_name = "Clickhouse password")]
     pub password: Option<String>,
@@ -48,10 +48,10 @@ pub struct Cli {
     pub city: Option<String>,
 
     #[arg(long, value_name = "Server lat")]
-    pub lat: Option<f64>,
+    pub lat: Option<f32>,
 
     #[arg(long, value_name = "Server lng")]
-    pub lng: Option<f64>,
+    pub lng: Option<f32>,
 
 }
 

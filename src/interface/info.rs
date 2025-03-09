@@ -1,6 +1,5 @@
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv6Addr};
 use rtnetlink::{Error as rtnetlinkErr, Handle};
-use klickhouse::Ipv6;
 use netlink_packet_route::link::{ LinkAttribute, LinkFlag, LinkHeader, LinkMessage };
 use netlink_packet_route::address::{ AddressMessage, AddressAttribute::{ Address, Local }};
 
@@ -93,8 +92,8 @@ pub async fn get_interface_address(handle: &Handle, name: &String) -> Result<Vec
         let mut address: Option<IpAddr> = None;
         let mut local: Option<IpAddr> = None;
 
-        let mut address_mapped: Option<Ipv6> = None;
-        let mut local_mapped: Option<Ipv6> = None;
+        let mut address_mapped: Option<Ipv6Addr> = None;
+        let mut local_mapped: Option<Ipv6Addr> = None;
 
         address_attributes.into_iter().for_each(|e| {
             match e {
@@ -105,14 +104,14 @@ pub async fn get_interface_address(handle: &Handle, name: &String) -> Result<Vec
         });
 
         match address {
-            Some(IpAddr::V4(v4)) => address_mapped = Some(Ipv6(v4.to_ipv6_mapped())),
-            Some(IpAddr::V6(v6)) => address_mapped = Some(Ipv6(v6)),
+            Some(IpAddr::V4(v4)) => address_mapped = Some(v4.to_ipv6_mapped()),
+            Some(IpAddr::V6(v6)) => address_mapped = Some(v6),
             None => ()
         }
 
         match local {
-            Some(IpAddr::V4(v4)) => local_mapped = Some(Ipv6(v4.to_ipv6_mapped())),
-            Some(IpAddr::V6(v6)) => local_mapped = Some(Ipv6(v6)),
+            Some(IpAddr::V4(v4)) => local_mapped = Some(v4.to_ipv6_mapped()),
+            Some(IpAddr::V6(v6)) => local_mapped = Some(v6),
             None => ()
         }
 

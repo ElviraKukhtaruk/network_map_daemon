@@ -63,7 +63,7 @@ pub fn get_parameters_from_config_file(config: &Config) -> Option<ServerConfig> 
                 })
             };
 
-            let updated_toml = toml::to_string_pretty(&final_config).inspect_err(|err| {
+           /*  let updated_toml = toml::to_string_pretty(&final_config).inspect_err(|err| {
                 error!("Failed to serialize the given data structure as a TOML string: {}", err);
             });
 
@@ -71,7 +71,7 @@ pub fn get_parameters_from_config_file(config: &Config) -> Option<ServerConfig> 
                 fs::write(conf_file, toml).inspect_err(|err| {
                     error!("Failed to write updated TOML string to the configuration file: {}", err);
                 }).ok();
-            }
+            }*/
             return Some(final_config);
         } else {
             error!("Configuration file: [server] section is missing.");

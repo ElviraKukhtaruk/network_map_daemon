@@ -12,8 +12,8 @@ pub struct Server {
     pub hostname: Option<String>,
     pub label: Option<String>,
     pub interface_filter: Vec<Option<String>>,
-    pub lat: Option<f64>,
-    pub lng: Option<f64>,
+    pub lat: Option<f32>,
+    pub lng: Option<f32>,
     pub city: Option<String>,
     pub country: Option<String>
 }

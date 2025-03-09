@@ -1,34 +1,31 @@
-use std::process;
-use interface::get_address::add_interface_addresses;
+use interface::get_address::{add_addr_to_database, check_for_interface_updates};
 use interface::get_stats::save_stats_every_second;
-use log::error;
-use tokio;
 
+use server::server::add_server_to_database;
+use tokio;
 use rtnetlink::{new_connection, Error as rtnetlinkErr, Handle};
 
 mod db;
 mod interface;
 mod errors;
 mod config;
+mod server;
 
 use crate::config::config:: { DbConnection, ServerConfiguration };
 use crate::db::queries;
 
 use crate::db::schema;
 
+
 #[tokio::main]
 async fn main() -> Result<(), rtnetlinkErr> {
-    log4rs::init_file("log4rs.yaml", Default::default()).inspect_err(|err| eprintln!("Logger error: {}", err)).ok();
+    log4rs::init_file("logs.yaml", Default::default()).inspect_err(|err| eprintln!("Logger error: {}", err)).ok();
 
     let con = DbConnection::new().await;
-    let client = con.get_client();
     let server_config = ServerConfiguration::new(con.get_config());
     let get_config = server_config.get_config().clone();
 
-    queries::add_server(client, get_config).await.inspect_err(|_| {
-        error!("Failed to add server to the database. Exiting...");
-        process::exit(1);
-    }).ok();
+    add_server_to_database(&con.get_client(), get_config).await;
 
     // Connection to a Netlink socket
     let connect = new_connection();
@@ -43,9 +40,20 @@ async fn main() -> Result<(), rtnetlinkErr> {
         Err(_) => panic!("RTNetLink Connection failed"),
     }
 
-    add_interface_addresses(&handle, client, &server_config.get_config().interface_filter, &server_config).await
-        .inspect_err(|e| error!("An error occurred while getting addresses: {}", e)).ok();
+   let handle_clone = handle.clone();
+   let client_clone = con.get_client().clone();
+   let server_conf_clone = server_config.clone();
 
-    save_stats_every_second(&handle, &server_config, client).await;
-    Ok(())
+   add_addr_to_database(&handle, &client_clone, &server_config).await;
+
+   tokio::spawn(async move {
+       check_for_interface_updates(&handle_clone, &client_clone, &server_conf_clone).await;
+   });
+
+   let stats_task = tokio::spawn(async move {
+       save_stats_every_second(&handle, &server_config, &con.get_client()).await;
+   });
+   stats_task.await.ok();
+
+   Ok(())
 }

@@ -1,9 +1,9 @@
-use klickhouse::Ipv6;
+use std::net::Ipv6Addr;
 
 #[derive(Debug)]
 pub struct InterfaceAddr {
-    pub address: (Option<Ipv6>, Option<u8>),
-    pub local: (Option<Ipv6>, Option<u8>)
+    pub address: (Option<Ipv6Addr>, Option<u8>),
+    pub local: (Option<Ipv6Addr>, Option<u8>)
 }
 
 #[derive(Debug)]

@@ -4,10 +4,16 @@ appenders:
     encoder:
       pattern: "{h({d(%Y-%m-%d %H:%M:%S)(utc)} - {l}: {m}{n})}"
   file_logger:
-    kind: file
+    kind: rolling_file
     path: "log/logs.log"
     encoder:
       pattern: "{d(%Y-%m-%d %H:%M:%S)(utc)} - {h({l})}: {m}{n}"
+    policy:
+      trigger:
+        kind: size
+        limit: 10mb
+      roller:
+        kind: delete
 root:
   level: info
   appenders:

@@ -6,14 +6,13 @@ pub fn get_hostname(hostname: Option<String>) -> Option<String> {
 
     // Find hostname in /etc/hostname (if not set), if not found, return None
     if let None = hostname {
-        fs::read_to_string("/etc/hostname")
+        return fs::read_to_string("/etc/hostname")
             .map(|s| s.trim().to_string())
             .inspect_err(|err| {
                 error!("Can't get hostname from: /etc/hostname: {}", err)
-            }).ok()?;
+            }).ok();
     }
     hostname
-
 }
 
 pub fn get_machine_id(machine_id: Option<String>) -> String {

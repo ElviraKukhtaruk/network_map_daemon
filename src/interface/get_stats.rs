@@ -1,5 +1,5 @@
-use log::error;
-use klickhouse::{Client, DateTime};
+use log::{error, info};
+use clickhouse::Client;
 use rtnetlink::Handle;
 use regex::Regex;
 use tokio::time::{interval, Duration};
@@ -23,7 +23,7 @@ pub async fn get_stats(handle: &Handle, name: &String, config: &ServerConfigurat
         return Some(Stat {
             server_id: server_id.to_string(),
             interface: stat.int_name,
-            timestamp: DateTime(klickhouse::Tz::UTC, timestamp.as_secs() as u32),
+            timestamp: timestamp.as_secs() as u32,
             rx: stat.rx_bytes,
             tx: stat.tx_bytes,
             rx_p: stat.rx_packets,
@@ -35,81 +35,82 @@ pub async fn get_stats(handle: &Handle, name: &String, config: &ServerConfigurat
     None
 }
 
-pub async fn save_stats_every_second(
-    handle: &Handle,
-    server_config: &ServerConfiguration,
-    client: &Client) {
-
+pub async fn save_stats_every_second(handle: &Handle, server_config: &ServerConfiguration, client: &Client) {
     let mut interval = interval(Duration::from_secs(1));
-
     // For concurrent updates.
     let last_stats = Arc::new(tokio::sync::Mutex::new(HashMap::<String, Option<Stat>>::new()));
+    info!("Collecting and saving statistics for all allowed interfaces [1 second].");
 
     loop {
         interval.tick().await;
         // Calling filter_interfaces concurrently.
-        if let Err(e) = filter_interfaces(handle, client, &server_config.get_config().interface_filter, server_config, Arc::clone(&last_stats)).await {
-            error!("Failed to save interfaces stats: {}", e);
+        let stats = filter_interfaces(handle, &server_config.get_config().interface_filter, server_config).await;
+
+        match stats {
+            Ok(stat) => {
+                let stats = save_stat(Arc::clone(&last_stats), stat).await;
+
+                if let Some(stat) = stats {
+                    add_stat(&client, stat).await.inspect_err(|e| {
+                        error!("Failed to save stats: {e}");
+                    }).ok();
+                }
+            },
+            Err(e) => error!("Failed to get stats for the filtered interface: {}", e)
         }
     }
 }
 
-pub async fn filter_interfaces(
-    handle: &Handle,
-    client: &Client,
-    rules: &Vec<Option<String>>,
-    config: &ServerConfiguration,
-    last_stats: Arc<tokio::sync::Mutex<HashMap<String, Option<Stat>>>>) -> Result<(), rtnetlink::Error> {
-
-    // Precompile regexes from rules once (if they exist).
-    let compiled_rules: Vec<Option<Regex>> = rules.iter().map(|rule_opt| {
-        rule_opt.as_ref().and_then(|pattern| Regex::new(pattern).ok())
-    }).collect();
+pub async fn filter_interfaces(handle: &Handle, rules: &Vec<Option<String>>, config: &ServerConfiguration) -> Result<Vec<Stat>, rtnetlink::Error> {
+    let compiled_rules: Vec<Option<Regex>> = rules
+        .iter()
+        .map(|rule_opt| rule_opt.as_ref().and_then(|pattern| Regex::new(pattern).ok()))
+        .collect();
+    let compiled_rules = Arc::new(compiled_rules);
 
     // Get all interfaces.
     let interfaces = get_all_interfaces(handle).await?;
 
-    // Process interfaces concurrently, limiting concurrency.
+    // Process each interface concurrently with a limit of 10.
     let max_concurrent = 10;
-    futures::stream::iter(interfaces)
-        .for_each_concurrent(max_concurrent, |interface| {
-            let handle = handle;
-            let client = client;
-            let config = config;
-            let compiled_rules = &compiled_rules;
-            let last_stats = Arc::clone(&last_stats);
+    let stats: Vec<Stat> = futures::stream::iter(interfaces)
+        .map(|interface| {
+            let compiled_rules = Arc::clone(&compiled_rules); // Clone the Arc for each closure
             async move {
                 let int_name = get_interface_name_from_attribute(interface.attributes);
                 let is_loopback = get_loopback_from_header(interface.header);
 
-                if let Some(name) = int_name.as_ref() {
+                if let Some(name) = int_name {
                     let interface_name_match = compiled_rules.iter().any(|opt_regex| {
                         if let Some(regex) = opt_regex {
-                            regex.is_match(name)
+                            regex.is_match(&name)
                         } else {
-                            // Rule is None and interface is not loopback, allow it.
+                            // If rule is None, allow non-loopback interfaces.
                             !is_loopback
                         }
                     });
 
                     if interface_name_match && !is_loopback {
-                        if let Some(stats) = get_stats(&handle, name, &config).await {
-                            save_stat(&client, Arc::clone(&last_stats), Some(stats)).await;
-                        }
+                        get_stats(&handle, &name, &config).await
+                    } else {
+                        None
                     }
+                } else {
+                    None
                 }
             }
-        }).await;
-
-    Ok(())
+        })
+        .buffer_unordered(max_concurrent)
+        .filter_map(|opt| async move { opt })
+        .collect()
+        .await;
+    Ok(stats)
 }
 
-pub async fn save_stat(
-    client: &Client,
-    last_stats: Arc<tokio::sync::Mutex<HashMap<String, Option<Stat>>>>,
-    stats: Option<Stat>) {
+pub async fn save_stat(last_stats: Arc<tokio::sync::Mutex<HashMap<String, Option<Stat>>>>, stats: Vec<Stat>) -> Option<Vec<Stat>> {
+    let mut final_stats: Vec<Stat> = Vec::new();
 
-    if let Some(curr_stat) = stats {
+    for curr_stat in stats {
         let server_id = curr_stat.server_id.as_str();
         let interface = curr_stat.interface.as_str();
 
@@ -117,25 +118,24 @@ pub async fn save_stat(
             // Lock the last_stats map to read/update the previous data.
             let mut last_data = last_stats.lock().await;
             if let Some(Some(old_data)) = last_data.get(interface) {
-                let old_time = old_data.timestamp.1;
-                let dt = (curr_stat.timestamp.1 - old_time) as u64;
+                let old_time = old_data.timestamp;
+                let dt = (curr_stat.timestamp - old_time) as u64;
 
-                println!("[{interface}] {:?} - {:?} = {:?}", curr_stat.tx, old_data.tx, (curr_stat.tx - old_data.tx));
-                add_stat(client, Stat {
+                final_stats.push( Stat {
                     server_id: server_id.into(),
                     interface: interface.into(),
                     timestamp: curr_stat.timestamp,
                     tx_p: (curr_stat.tx_p - old_data.tx_p) / dt,
                     rx_p: (curr_stat.rx_p - old_data.rx_p) / dt,
-                    tx: ((curr_stat.tx - old_data.tx) * 8) / dt,
-                    rx: ((curr_stat.rx - old_data.rx) * 8) / dt,
+                    tx: (curr_stat.tx - old_data.tx) / dt,
+                    rx: (curr_stat.rx - old_data.rx) / dt,
                     tx_d: (curr_stat.tx_d - old_data.tx_d) / dt,
                     rx_d: (curr_stat.rx_d - old_data.rx_d) / dt,
-                }).await.ok();
+                });
             }
-
             // Update the last_stats for this interface.
             last_data.insert(interface.into(), Some(curr_stat));
         }
     }
+    Some(final_stats)
 }

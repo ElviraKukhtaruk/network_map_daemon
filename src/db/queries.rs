@@ -1,116 +1,156 @@
-use log::{info, warn, error};
-use klickhouse::*;
+use clickhouse::error::Error;
+use futures::future::join_all;
+use log::{info, error};
+use clickhouse::Client;
+use serde::{Deserialize, Serialize};
 use crate::schema::{ Server, Addr, Stat };
 use crate::errors::query::QueryErr;
 
-pub async fn add_server(client: &Client, server: Server) -> Result<(), QueryErr> {
-    info!("Checking if server with ID '{}' exists in the database...", server.server_id);
-    let server_exists: bool;
+use clickhouse::Row;
 
-    let query = format!("
-        SELECT * FROM server WHERE server_id = '{}'
-        AND hostname = '{}';
-    ", server.server_id, server.hostname);
-    let servers = client.query_opt::<Server>(query).await;
+pub async fn server_exists(client: &Client, server: Server) -> Result<bool, QueryErr> {
+    let servers = client.query("SELECT * FROM server WHERE server_id = ?")
+        .bind(server.server_id)
+        .fetch_optional::<Server>().await;
 
     match servers {
-        Ok(Some(received_server)) => server_exists = received_server.server_id == server.server_id &&
-        received_server.hostname == server.hostname,
-
-        Ok(None) => server_exists = false,
-
-        Err(e) => {
-            error!("An error occured while checking server '{}' hostname '{}': {}", server.server_id, server.hostname, e);
-            server_exists = true;
-        }
-    }
-
-    if !server_exists {
-        let rows = vec![server];
-        let server = client.insert_native_block("INSERT INTO server FORMAT native", rows).await;
-
-        match server {
-            Err(err) => {
-                error!("INSERT INTO server: {:?}", err);
-                Err(QueryErr::KlickhouseError)
-            },
-            _ => {
-                info!("Server was added to database!");
-                Ok(())
-            }
-        }
-    } else {
-        warn!("Server with the server_id {} and hostname {} already exists. Skipping.", server.server_id, server.hostname);
-        Ok(())
-    }
-}
-
-pub async fn add_addr(client: &Client, addrs: Addr) -> Result<(), QueryErr> {
-    info!("Checking if the interface '{}' of server {} exists in the database...", addrs.interface, addrs.server_id);
-    let int_exists: bool;
-
-    let query = format!("
-        SELECT * FROM addr WHERE server_id = '{}' AND
-        interface = '{}';
-    ", addrs.server_id, addrs.interface);
-    let interfaces = client.query_opt::<Addr>(query).await;
-
-    match interfaces {
-        Ok(Some(addr)) => int_exists = addr.server_id == addrs.server_id &&
-            addr.interface == addrs.interface,
-
-        Ok(None) => int_exists = false,
-
-        Err(e) => {
-            error!("An error occured while checking interface '{}': {}", addrs.interface, e);
-            int_exists = true;
-        }
-    }
-
-    if !int_exists {
-        let address = Addr {
-            server_id: addrs.server_id,
-            interface: addrs.interface,
-            ipv6: addrs.ipv6,
-            ipv6_peer: addrs.ipv6_peer
-        };
-
-        let rows = vec![address];
-        let address = client.insert_native_block("INSERT INTO addr FORMAT native", rows).await;
-
-        match address {
-            Err(err) => {
-                error!("INSERT INTO addr: {:?}", err);
-                Err(QueryErr::KlickhouseError)
-            }
-            Ok(_) => Ok(())
-        }
-    } else {
-        warn!("An interface with the same name {} and server ID {} already exists. Skipping.", addrs.interface, addrs.server_id);
-        Ok(())
-    }
-}
-
-pub async fn add_stat(client: &Client, stat: Stat) -> Result<(), QueryErr> {
-    let stat = Stat {
-        server_id: stat.server_id,
-        interface: stat.interface,
-        timestamp: stat.timestamp,
-        rx: stat.rx,
-        tx: stat.tx,
-        rx_p: stat.rx_p,
-        tx_p: stat.tx_p,
-        rx_d: stat.rx_d,
-        tx_d: stat.tx_d
-    };
-    let rows = vec![stat];
-    let address = client.insert_native_block("INSERT INTO stat FORMAT native", rows).await;
-
-    match address {
+        Ok(Some(_)) => Ok(true),
+        Ok(None) => Ok(false),
         Err(err) => {
-            error!("INSERT INTO stat: {:?}", err);
-            Err(QueryErr::KlickhouseError)
+            error!("An error occured while checking server: {}", err);
+            return Err(QueryErr::ClickhouseError);
         }
-        Ok(_) => Ok(())
     }
+}
+
+#[derive(Row, Serialize, Deserialize, Debug, Clone)]
+    struct MyRow {
+        one: String,
+        two: f64,
+        opt: Option<String>
+    }
+
+pub async fn add_server(client: &Client, server: Server) -> Result<(), Error> {
+    let mut insert_server = client.insert("server")?;
+
+    insert_server.write(&server).await?;
+    insert_server.end().await?;
+
+    info!("Server was added to database!");
+    Ok(())
+}
+
+pub async fn update_server(client: &Client, server: Server) -> Result<(), Error> {
+
+    client.query("ALTER TABLE server UPDATE hostname=?, label=?, lat=?,
+        lng=?, interface_filter=?, city=?, country=? WHERE server_id=?")
+        .bind(&server.hostname)
+        .bind(&server.label)
+        .bind(&server.lat)
+        .bind(&server.lng)
+        .bind(&server.interface_filter)
+        .bind(&server.city)
+        .bind(&server.country)
+        .bind(&server.server_id)
+        .execute().await?;
+
+    info!("Server was updated!");
+    Ok(())
+}
+
+pub async fn get_addr(client: &Client, server: &Server) -> Result<Vec<Addr>, Error> {
+
+    let addrs = client.query("SELECT * FROM addr WHERE server_id = ?")
+        .bind(&server.server_id)
+        .fetch_all::<Addr>().await?;
+
+    Ok(addrs)
+}
+
+pub async fn add_addr(client: &Client, addrs: Vec<Addr>) -> Result<(), Error> {
+    info!("Adding interfaces to the database");
+
+    let mut insert_server = client.insert("addr")?;
+    for addr in addrs {
+        insert_server.write(&addr).await?;
+    }
+    insert_server.end().await?;
+    Ok(())
+}
+
+pub async fn delete_addr(client: &Client, addrs: Vec<Addr>) -> Result<(), Error> {
+    info!("Deleting interfaces from the database");
+
+    if addrs.is_empty() {
+        return Ok(());
+    }
+
+    // Build the WHERE clause dynamically
+    let mut query = String::from("DELETE FROM addr WHERE ");
+    let conditions: Vec<String> = addrs
+        .iter()
+        .map(|_| "(server_id = ? AND interface = ?)".to_string())
+        .collect();
+    query.push_str(&conditions.join(" OR "));
+
+    // Prepare and bind parameters
+    let mut prepared_query = client.query(&query);
+    for addr in &addrs {
+        prepared_query = prepared_query.bind(&addr.server_id).bind(&addr.interface);
+    }
+
+    prepared_query.execute().await?;
+
+    Ok(())
+}
+
+pub async fn update_addr(client: &Client, addrs: Vec<Addr>) -> Result<(), Error> {
+    info!("Updating interfaces");
+
+    if addrs.is_empty() {
+        return Ok(());
+    }
+
+    // Collect futures for concurrent execution
+    let mut update_futures = Vec::new();
+    for addr in &addrs {
+        let query = "ALTER TABLE addr UPDATE ipv6 = ?, ipv6_peer = ? WHERE server_id = ? AND interface = ?";
+        let future = client
+            .query(query)
+            .bind(&addr.ipv6)
+            .bind(&addr.ipv6_peer)
+            .bind(&addr.server_id)
+            .bind(&addr.interface)
+            .execute();
+        update_futures.push(future);
+    }
+
+    // Execute all updates concurrently and handle results
+    let results = join_all(update_futures).await;
+    for result in results {
+        result?;
+    }
+
+    Ok(())
+}
+
+pub async fn delete_data_efficiently(client: &Client, server_id: &String) -> Result<(), Error> {
+    info!("Deleting data from the addr table");
+
+    client.query("ALTER TABLE addr DROP PARTITION ?")
+        .bind(server_id)
+        .execute().await?;
+
+    info!("Successfully deleted data for server with ID {server_id} from the addr table");
+    Ok(())
+}
+
+pub async fn add_stat(client: &Client, stats: Vec<Stat>) -> Result<(), Error> {
+
+    let mut insert_stat = client.insert("stat")?;
+    for stat in stats.clone() {
+        insert_stat.write(&stat).await?;
+    }
+    insert_stat.end().await?;
+    Ok(())
 }
