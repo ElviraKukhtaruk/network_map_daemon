@@ -52,7 +52,7 @@ impl DbConnection {
             ("clickhouse.password", cli.password),
             ("clickhouse.db", cli.db),
             ("clickhouse.hostname", cli.servername),
-            ("clickhouse.native_port", cli.port.map(|p| p.to_string())),
+            ("clickhouse.port", cli.port.map(|p| p.to_string())),
         ];
 
         for (key, value) in override_options {
@@ -72,8 +72,8 @@ impl DbConnection {
         let default_database: String = config.get("clickhouse.db").expect("user key for clickhouse is missing");
 
 
-        let host: String = config.get("clickhouse.hostname").expect("hostname_for_app key for clickhouse is missing");
-        let port: String = config.get("clickhouse.port").expect("native_port key for clickhouse is missing");
+        let host: String = config.get("clickhouse.hostname").expect("hostname key for clickhouse is missing");
+        let port: String = config.get("clickhouse.port").expect("port key for clickhouse is missing");
 
         let socket = format!("http://{host}:{port}/");
 

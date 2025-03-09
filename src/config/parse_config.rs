@@ -24,6 +24,5 @@ pub struct Clickhouse {
     user: Option<String>,
     password: Option<String>,
     db: Option<String>,
-    http_port: Option<u32>,
-    native_port: Option<u32>
+    port: Option<u32>
 }
