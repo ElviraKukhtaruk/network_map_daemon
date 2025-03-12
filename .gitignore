@@ -6,3 +6,5 @@ token
 Cargo.lock
 pozn.txt
 log/
+stats_logs/
+logs/

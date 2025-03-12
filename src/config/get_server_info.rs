@@ -3,7 +3,6 @@ use rand::{self, RngCore};
 use log::error;
 
 pub fn get_hostname(hostname: Option<String>) -> Option<String> {
-
     // Find hostname in /etc/hostname (if not set), if not found, return None
     if let None = hostname {
         return fs::read_to_string("/etc/hostname")

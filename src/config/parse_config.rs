@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::{ Deserialize, Serialize };
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -17,7 +19,8 @@ pub struct Server {
     pub city: Option<String>,
     pub country: Option<String>,
     pub priority: Option<u8>,
-    pub center: Option<bool>
+    pub center: Option<bool>,
+    pub logs_path: Option<String>
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

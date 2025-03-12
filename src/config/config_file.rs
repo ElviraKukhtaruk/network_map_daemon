@@ -1,7 +1,6 @@
 use std::{fs, process};
 use clap::Parser;
 use config::Config;
-use log::error;
 
 use super::{parse_cli, parse_config::{ Server, ServerConfig }};
 use crate::config::get_server_info::{ get_hostname, get_machine_id };
@@ -9,14 +8,14 @@ use crate::config::get_server_info::{ get_hostname, get_machine_id };
 pub fn read_file(config_path: &str) -> Option<ServerConfig> {
     // Read the existing file
     let content = fs::read_to_string(config_path).inspect_err(|err| {
-        error!("An error occured while reading config file: {}", err);
+        eprintln!("An error occured while reading config file: {}", err);
     }).ok()?;
-    let config_toml: Result<ServerConfig, toml::de::Error> = toml::from_str(&content);
+    let config_toml = toml::from_str(&content);
 
     match config_toml {
         Ok(content) => Some(content),
-        Err(err) =>{
-            error!("An error occured while reading config file: {}", err);
+        Err(err) => {
+            eprintln!("An error occured while reading config file: {}", err);
             None
         }
     }
@@ -61,26 +60,27 @@ pub fn get_parameters_from_config_file(config: &Config) -> Option<ServerConfig> 
                     city: server.city,
                     country: server.country,
                     priority: server.priority,
-                    center: server.center
+                    center: server.center,
+                    logs_path: server.logs_path
                 })
             };
 
             let updated_toml = toml::to_string_pretty(&final_config).inspect_err(|err| {
-                error!("Failed to serialize the given data structure as a TOML string: {}", err);
+                eprintln!("Failed to serialize the given data structure as a TOML string: {}", err);
                 process::exit(1);
             });
             if let Ok(toml) = updated_toml {
                 fs::write(conf_file, toml).inspect_err(|err| {
-                    error!("Failed to write updated TOML string to the configuration file: {}", err);
+                    eprintln!("Failed to write updated TOML string to the configuration file: {}", err);
                     process::exit(1);
                 }).ok();
             };
             return Some(final_config);
         } else {
-            error!("Configuration file: [server] section is missing.");
+            eprintln!("Configuration file: [server] section is missing.");
         }
     } else {
-        error!("Configuration file is missing.");
+        eprintln!("Configuration file is missing.");
     }
     None
 }

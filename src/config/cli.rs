@@ -15,7 +15,8 @@ pub fn get_parameters_from_cli() -> Server {
         city: cli.city,
         country: cli.country,
         priority: cli.priority,
-        center: cli.center
+        center: cli.center,
+        logs_path: Some(cli.logs_path)
     }
 
 }

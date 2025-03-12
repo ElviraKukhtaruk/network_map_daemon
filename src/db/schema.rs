@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::net::Ipv6Addr;
+use std::{net::Ipv6Addr, path::PathBuf};
 
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

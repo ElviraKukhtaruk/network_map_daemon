@@ -22,7 +22,7 @@ pub struct Cli {
     pub db: Option<String>,
 
     #[arg(short, long, value_name = "Clickhouse user")]
-    pub user: Option<PathBuf>,
+    pub user: Option<String>,
 
     /// [/etc/machine-id default, generate random if not provided]
     #[arg(long, value_name = "Server ID")]
@@ -54,6 +54,13 @@ pub struct Cli {
     #[arg(long, value_name = "Server priority")]
     pub priority: Option<u8>,
 
-    #[arg(long, value_name = "Set center")]
-    pub center: Option<bool>
+    /// Set world's map point of view.
+    /// If `true`, the 3D world map initializes with the specified server at the center,
+    /// adjusting rotation and position accordingly.
+    #[arg(long, value_name = "Map center")]
+    pub center: Option<bool>,
+
+    /// Specifies the directory path for saving log files.
+    #[arg(long, value_name = "Path", default_value_t = String::from("./stats_logs/logs.log"))]
+    pub logs_path: String
 }
