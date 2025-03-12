@@ -8,7 +8,6 @@ use crate::db::schema::Server;
 use clap::Parser;
 use crate::config::{ config_file, cli };
 use super::get_server_info::get_machine_id;
-use crate::config::logs::configure_logs;
 
 pub struct DbConnection {
     client: Client,

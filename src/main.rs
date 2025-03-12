@@ -1,5 +1,3 @@
-use std::process;
-
 use config::logs::configure_logs;
 use interface::get_address::{add_addr_to_database, check_for_interface_updates};
 use interface::get_stats::save_stats_every_second;
