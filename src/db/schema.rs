@@ -37,5 +37,7 @@ pub struct Server {
     pub lng: f32,
     pub interface_filter: Vec<Option<String>>,
     pub city: Option<String>,
-    pub country: Option<String>
+    pub country: Option<String>,
+    pub priority: Option<u8>,
+    pub center: Option<bool>
 }

@@ -13,7 +13,9 @@ pub fn get_parameters_from_cli() -> Server {
         lng: cli.lng,
         hostname: cli.hostname,
         city: cli.city,
-        country: cli.country
+        country: cli.country,
+        priority: cli.priority,
+        center: cli.center
     }
 
 }

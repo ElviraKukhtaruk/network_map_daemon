@@ -83,7 +83,6 @@ impl DbConnection {
             .with_password(password)
             .with_database(default_database);
 
-            info!("Connected to clickhouse: {}", &socket);
             DbConnection { client, config }
     }
 
@@ -106,14 +105,14 @@ impl ServerConfiguration {
 
             // Extract all config values at once
             let (config_server_id, config_hostname, config_interface_filter,
-                 config_label, config_country, config_city, config_lat, config_lng) =
+                 config_label, config_country, config_city, config_lat, config_lng, config_priority, config_center) =
 
             if let Some(s) = config_server {(
                 s.server_id, s.hostname, s.interface_filter, s.label,
-                s.country, s.city, s.lat, s.lng,
+                s.country, s.city, s.lat, s.lng, s.priority, s.center
             )} else {(
                 None, None, Vec::new(), None,
-                None, None, None, None,
+                None, None, None, None, None, None
             )};
 
             // Construct server fields with CLI taking precedence over config
@@ -130,11 +129,13 @@ impl ServerConfiguration {
             let city = cli_params.city.or(config_city);
             let lat = cli_params.lat.or(config_lat).expect("Missing parameter: lat");
             let lng = cli_params.lng.or(config_lng).expect("Missing parameter: lng");
+            let priority = cli_params.priority.or(config_priority);
+            let center = cli_params.center.or(config_center);
 
             // Build and return the server configuration
             let server = Server {
                 server_id, hostname, label, interface_filter,
-                country, city, lat, lng
+                country, city, lat, lng, priority, center
             };
             info!("Server configuration is valid");
             ServerConfiguration { config: server }

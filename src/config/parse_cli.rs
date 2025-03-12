@@ -1,7 +1,5 @@
 use std::path::PathBuf;
 use clap::Parser;
-use serde::Serialize;
-
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -53,13 +51,9 @@ pub struct Cli {
     #[arg(long, value_name = "Server lng")]
     pub lng: Option<f32>,
 
-}
+    #[arg(long, value_name = "Server priority")]
+    pub priority: Option<u8>,
 
-#[derive(Serialize)]
-pub struct ServerConfigStructure {
-    pub user: String,
-    pub password: String,
-    pub db: String,
-    pub hostname: String,
-    pub native_port: u16,
+    #[arg(long, value_name = "Set center")]
+    pub center: Option<bool>
 }

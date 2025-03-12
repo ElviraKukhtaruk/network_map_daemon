@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, process};
 use clap::Parser;
 use config::Config;
 use log::error;
@@ -59,10 +59,22 @@ pub fn get_parameters_from_config_file(config: &Config) -> Option<ServerConfig> 
                     lat: server.lat,
                     lng: server.lng,
                     city: server.city,
-                    country: server.country
+                    country: server.country,
+                    priority: server.priority,
+                    center: server.center
                 })
             };
 
+            let updated_toml = toml::to_string_pretty(&final_config).inspect_err(|err| {
+                error!("Failed to serialize the given data structure as a TOML string: {}", err);
+                process::exit(1);
+            });
+            if let Ok(toml) = updated_toml {
+                fs::write(conf_file, toml).inspect_err(|err| {
+                    error!("Failed to write updated TOML string to the configuration file: {}", err);
+                    process::exit(1);
+                }).ok();
+            };
             return Some(final_config);
         } else {
             error!("Configuration file: [server] section is missing.");

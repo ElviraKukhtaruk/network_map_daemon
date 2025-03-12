@@ -2,11 +2,8 @@ use clickhouse::error::Error;
 use futures::future::join_all;
 use log::{info, error};
 use clickhouse::Client;
-use serde::{Deserialize, Serialize};
 use crate::schema::{ Server, Addr, Stat };
 use crate::errors::query::QueryErr;
-
-use clickhouse::Row;
 
 pub async fn server_exists(client: &Client, server: Server) -> Result<bool, QueryErr> {
     let servers = client.query("SELECT * FROM server WHERE server_id = ?")
@@ -23,13 +20,6 @@ pub async fn server_exists(client: &Client, server: Server) -> Result<bool, Quer
     }
 }
 
-#[derive(Row, Serialize, Deserialize, Debug, Clone)]
-    struct MyRow {
-        one: String,
-        two: f64,
-        opt: Option<String>
-    }
-
 pub async fn add_server(client: &Client, server: Server) -> Result<(), Error> {
     let mut insert_server = client.insert("server")?;
 
@@ -43,7 +33,7 @@ pub async fn add_server(client: &Client, server: Server) -> Result<(), Error> {
 pub async fn update_server(client: &Client, server: Server) -> Result<(), Error> {
 
     client.query("ALTER TABLE server UPDATE hostname=?, label=?, lat=?,
-        lng=?, interface_filter=?, city=?, country=? WHERE server_id=?")
+        lng=?, interface_filter=?, city=?, country=?, priority=?, center=? WHERE server_id=?")
         .bind(&server.hostname)
         .bind(&server.label)
         .bind(&server.lat)
@@ -51,6 +41,8 @@ pub async fn update_server(client: &Client, server: Server) -> Result<(), Error>
         .bind(&server.interface_filter)
         .bind(&server.city)
         .bind(&server.country)
+        .bind(&server.priority)
+        .bind(&server.center)
         .bind(&server.server_id)
         .execute().await?;
 

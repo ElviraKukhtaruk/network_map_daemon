@@ -15,7 +15,9 @@ pub struct Server {
     pub lat: Option<f32>,
     pub lng: Option<f32>,
     pub city: Option<String>,
-    pub country: Option<String>
+    pub country: Option<String>,
+    pub priority: Option<u8>,
+    pub center: Option<bool>
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
