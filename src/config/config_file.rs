@@ -51,7 +51,7 @@ pub fn get_parameters_from_config_file(config: &Config) -> Option<ServerConfig> 
             let final_config = ServerConfig {
                 clickhouse: config_toml.clickhouse,
                 server: Some(Server {
-                    server_id: Some(machine_id),
+                    server_id: Some(machine_id.0),
                     interface_filter: server.interface_filter,
                     hostname,
                     label: server.label,
@@ -65,16 +65,19 @@ pub fn get_parameters_from_config_file(config: &Config) -> Option<ServerConfig> 
                 })
             };
 
-            let updated_toml = toml::to_string_pretty(&final_config).inspect_err(|err| {
-                eprintln!("Failed to serialize the given data structure as a TOML string: {}", err);
-                process::exit(1);
-            });
-            if let Ok(toml) = updated_toml {
-                fs::write(conf_file, toml).inspect_err(|err| {
-                    eprintln!("Failed to write updated TOML string to the configuration file: {}", err);
+            // Save new generated ID
+            if !machine_id.1 {
+                let updated_toml = toml::to_string_pretty(&final_config).inspect_err(|err| {
+                    eprintln!("Failed to serialize the given data structure as a TOML string: {}", err);
                     process::exit(1);
-                }).ok();
-            };
+                });
+                if let Ok(toml) = updated_toml {
+                    fs::write(conf_file, toml).inspect_err(|err| {
+                        eprintln!("Failed to write updated TOML string to the configuration file: {}", err);
+                        process::exit(1);
+                    }).ok();
+                };
+            }
             return Some(final_config);
         } else {
             eprintln!("Configuration file: [server] section is missing.");

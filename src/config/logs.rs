@@ -7,37 +7,35 @@ use log4rs::{
     encode::pattern::PatternEncoder,
 };
 use log::LevelFilter;
-use clap::Parser;
-use super::parse_cli;
 
 
-pub fn configure_logs() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = parse_cli::Cli::parse();
+pub fn configure_logs(logs_path: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
 
-    let console_appender = ConsoleAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{h({d(%Y-%m-%d %H:%M:%S)(utc)} - {l}: {m}{n})}")))
-        .build();
+    // Build the console appender with a specific log pattern
+        let console_appender = ConsoleAppender::builder()
+            .encoder(Box::new(PatternEncoder::new("{h({d(%Y-%m-%d %H:%M:%S)(utc)} - {l}: {m}{n})}")))
+            .build();
 
-    let file_appender = RollingFileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{d(%Y-%m-%d %H:%M:%S)(utc)} - {h({l})}: {m}{n}")))
-        .build(
-            &cli.logs_path,
-            Box::new(CompoundPolicy::new(
-                Box::new(SizeTrigger::new(10 * 1024 * 1024)),
-                Box::new(DeleteRoller::new()),
-            )),
-        )?;
+        // Start building the config with the console appender
+        let mut config_builder = Config::builder()
+            .appender(Appender::builder().build("stdout", Box::new(console_appender)));
+        let mut root_builder = Root::builder().appender("stdout");
 
-    let config = Config::builder()
-        .appender(Appender::builder().build("stdout", Box::new(console_appender)))
-        .appender(Appender::builder().build("file_logger", Box::new(file_appender)))
-        .build(
-            Root::builder()
-                .appender("stdout")
-                .appender("file_logger")
-                .build(LevelFilter::Info),
-        )?;
-
-    log4rs::init_config(config)?;
-    Ok(())
+        // If a log file path is provided, add the file appender
+        if let Some(path) = logs_path {
+            let file_appender = RollingFileAppender::builder()
+                .encoder(Box::new(PatternEncoder::new("{d(%Y-%m-%d %H:%M:%S)(utc)} - {h({l})}: {m}{n}")))
+                .build(
+                    path,
+                    Box::new(CompoundPolicy::new(
+                        Box::new(SizeTrigger::new(10 * 1024 * 1024)), // 10 MB size trigger
+                        Box::new(DeleteRoller::new()),                // Delete old logs
+                    )),
+                )?;
+            config_builder = config_builder.appender(Appender::builder().build("file_logger", Box::new(file_appender)));
+            root_builder = root_builder.appender("file_logger");
+        }
+        let conf = config_builder.build(root_builder.build(LevelFilter::Info))?;
+        log4rs::init_config(conf)?;
+        Ok(())
 }

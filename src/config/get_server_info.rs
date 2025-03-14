@@ -8,23 +8,24 @@ pub fn get_hostname(hostname: Option<String>) -> Option<String> {
         return fs::read_to_string("/etc/hostname")
             .map(|s| s.trim().to_string())
             .inspect_err(|err| {
-                error!("Can't get hostname from: /etc/hostname: {}", err)
+                eprintln!("Can't get hostname from: /etc/hostname: {}", err)
             }).ok();
     }
     hostname
 }
 
-pub fn get_machine_id(machine_id: Option<String>) -> String {
+pub fn get_machine_id(machine_id: Option<String>) -> (String, bool) {
     // Find machine-id in /etc/machine-id (if not set), if not found, generate random id.
-    let machine_id = machine_id.or_else(|| {
-        fs::read_to_string("/etc/machine-id")
-        .map(|s| s.trim().to_string())
-        .inspect_err(|err| error!("Can't get machine-id from /etc/machine-id: {}. Generating new one.", err))
-        .ok()
-    }).unwrap_or_else(|| {
-        let mut bytes = [0u8; 16];
-        rand::rng().fill_bytes(&mut bytes);
-        hex::encode(bytes)
-    });
-    machine_id
+    machine_id.map(|id| (id, true)) // Use provided ID, not from file
+        .or_else(|| {
+            fs::read_to_string("/etc/machine-id")
+                .map(|s| (s.trim().to_string(), true))
+                .inspect_err(|err| error!("Can't get machine-id from /etc/machine-id: {}. Generating new one.", err))
+                .ok()
+        })
+        .unwrap_or_else(|| {
+            let mut bytes = [0u8; 16];
+            rand::rng().fill_bytes(&mut bytes);
+            (hex::encode(bytes), false) // Generate random ID, not from file
+        })
 }

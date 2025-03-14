@@ -3,7 +3,7 @@ use clickhouse::Client;
 use config::{Config, Environment, File};
 use log::{info, error};
 use dotenv::dotenv;
-use crate::config::parse_cli;
+use crate::config::{logs::configure_logs, parse_cli};
 use crate::db::schema::Server;
 use clap::Parser;
 use crate::config::{ config_file, cli };
@@ -106,18 +106,18 @@ impl ServerConfiguration {
         // Extract all config values at once
         let (config_server_id, config_hostname, config_interface_filter,
             config_label, config_country, config_city, config_lat,
-            config_lng, config_priority, config_center) =
+            config_lng, config_priority, config_center, config_logs_path) =
 
         if let Some(s) = config_server {(
             s.server_id, s.hostname, s.interface_filter, s.label,
-            s.country, s.city, s.lat, s.lng, s.priority, s.center
+            s.country, s.city, s.lat, s.lng, s.priority, s.center, s.logs_path
         )} else {(
             None, None, Vec::new(), None,
-            None, None, None, None, None, None
+            None, None, None, None, None, None, None
         )};
 
         // Construct server fields with CLI taking precedence over config
-        let server_id = cli_params.server_id.unwrap_or_else(|| get_machine_id(config_server_id));
+        let server_id = cli_params.server_id.unwrap_or_else(|| get_machine_id(config_server_id).0);
 
         let hostname = cli_params.hostname.or(config_hostname).expect("Missing parameter: hostname");
 
@@ -132,6 +132,9 @@ impl ServerConfiguration {
         let lng = cli_params.lng.or(config_lng).expect("Missing parameter: lng");
         let priority = cli_params.priority.or(config_priority);
         let center = cli_params.center.or(config_center);
+        let logs_path = cli_params.logs_path.or(config_logs_path);
+
+        configure_logs(logs_path.clone()).inspect_err(|e| println!("Failed to setup logging: {e}")).ok();
 
         // Build and return the server configuration
         let server = Server {

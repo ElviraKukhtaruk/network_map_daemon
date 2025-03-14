@@ -149,7 +149,7 @@ pub async fn add_addr_to_database(handle: &Handle, client: &Client, server: &Ser
 
 pub async fn check_for_interface_updates(handle: &Handle, client: &Client, server: &ServerConfiguration) {
     let mut interval = interval(Duration::from_secs(5));
-    info!("Cheking for interface updates [5 second].");
+    info!("Cheking for interface updates [5 seconds].");
 
 
     loop {

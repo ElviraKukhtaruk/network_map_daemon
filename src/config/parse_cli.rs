@@ -61,6 +61,6 @@ pub struct Cli {
     pub center: Option<bool>,
 
     /// Specifies the directory path for saving log files.
-    #[arg(long, value_name = "Path", default_value_t = String::from("./stats_logs/logs.log"))]
-    pub logs_path: String
+    #[arg(long, value_name = "Path")]
+    pub logs_path: Option<String>
 }

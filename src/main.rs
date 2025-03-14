@@ -1,4 +1,3 @@
-use config::logs::configure_logs;
 use interface::get_address::{add_addr_to_database, check_for_interface_updates};
 use interface::get_stats::save_stats_every_second;
 
@@ -20,8 +19,6 @@ use crate::db::schema;
 
 #[tokio::main]
 async fn main() -> Result<(), rtnetlinkErr> {
-    configure_logs().inspect_err(|e| println!("Failed to setup logging: {e}")).ok();
-
     let con = DbConnection::new().await;
     let server_config = ServerConfiguration::new(con.get_config());
     let get_config = server_config.get_config().clone();
