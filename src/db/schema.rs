@@ -13,7 +13,9 @@ pub struct Stat {
     pub rx_p: u64,
     pub tx_p: u64,
     pub rx_d: u64,
-    pub tx_d: u64
+    pub tx_d: u64,
+    pub rx_e: u64,
+    pub tx_e: u64
 }
 
 #[derive(Hash, Eq, PartialEq)]

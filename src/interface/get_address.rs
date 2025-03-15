@@ -6,14 +6,14 @@ use std::time::Duration;
 use futures::StreamExt;
 use clickhouse::Client;
 use regex::Regex;
-use rtnetlink::Handle;
+use rtnetlink::{Error, Handle};
 use log::{error, info, warn};
 use tokio::time::interval;
 
 use crate::db::queries::{add_addr, delete_addr, delete_data_efficiently, get_addr, update_addr};
 use crate::{config::config::ServerConfiguration, db::schema::Addr};
 use crate::interface::info;
-use super::info::{get_all_interfaces, get_interface_name_from_attribute, get_loopback_from_header};
+use super::info::get_filtered_interfaces_names;
 
 #[derive(Debug)]
 pub struct Updates {
@@ -23,50 +23,26 @@ pub struct Updates {
 }
 
 pub async fn get_interface_addresses(handle: &Handle, rules: &[Option<String>], config: &ServerConfiguration, verbose: bool) -> Result<Vec<Addr>, rtnetlink::Error> {
+    // Filter interface names based on the rules
+    let matching_interface_names = get_filtered_interfaces_names(&handle, rules).await?;
 
-    let compiled_rules: Vec<Option<Regex>> = rules
-        .iter()
-        .map(|rule_opt| rule_opt.as_ref().and_then(|pattern| Regex::new(pattern).ok()))
-        .collect();
-    let compiled_rules = Arc::new(compiled_rules);
-
-    // Get all network interfaces.
-    let interfaces = get_all_interfaces(handle).await?;
-
-    // Process each interface concurrently with a limit of 10.
+    // Process each filtered interface
     let max_concurrent = 10;
-    let addrs: Vec<Addr> = futures::stream::iter(interfaces)
-        .map(|interface| {
-            let compiled_rules = Arc::clone(&compiled_rules); // Clone the Arc for each closure
+    let addrs: Result<Vec<Addr>, rtnetlink::Error> = futures::stream::iter(matching_interface_names)
+        .map(|name| {
             async move {
-                let int_name = get_interface_name_from_attribute(interface.attributes);
-                let is_loopback = get_loopback_from_header(interface.header);
-
-                if let Some(name) = int_name {
-                    let interface_name_match = compiled_rules.iter().any(|opt_regex| {
-                        if let Some(regex) = opt_regex {
-                            regex.is_match(&name)
-                        } else {
-                            // If rule is None, allow non-loopback interfaces.
-                            !is_loopback
-                        }
-                    });
-
-                    if interface_name_match && !is_loopback {
-                        get_addresses(handle, name, config, verbose).await.ok()
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
+                get_addresses(handle, name, config, verbose).await.inspect_err(|e| {
+                    error!("An error occured while getting address! {e}");
+                })
             }
         })
         .buffer_unordered(max_concurrent)
-        .filter_map(|opt| async move { opt })
-        .collect()
-        .await;
-    Ok(addrs)
+        .collect::<Vec<Result<Addr, rtnetlink::Error>>>()
+        .await
+        .into_iter()
+        .collect();
+
+    addrs
 }
 
 pub async fn get_addresses(handle: &Handle, name: String, config: &ServerConfiguration, verbose: bool) -> Result<Addr, rtnetlink::Error> {
@@ -126,58 +102,62 @@ pub async fn add_addr_to_database(handle: &Handle, client: &Client, server: &Ser
     info!("Adding interfaces' IPv6/IPv4-mapped addresses...");
 
     // Delete data efficiently
-    if let Err(e) = delete_data_efficiently(client, &server.get_config().server_id).await {
-        error!("Failed to delete addresses from the database: {e}. Exiting...");
-        process::exit(1);
-    }
-
-    // Get interface addresses
-    let addrs = match get_interface_addresses(&handle, &server.get_config().interface_filter, &server, true).await {
-        Ok(addrs) => addrs,
-        Err(e) => {
-            error!("An error occurred while getting addresses: {e}. Exiting...");
-            process::exit(1);
-        }
-    };
-
-    // Add addresses to the database
-    add_addr(client, addrs).await.inspect_err(|e| {
-        error!("Failed to add addresses to the database: {e}. Exiting...");
+    delete_data_efficiently(client, &server.get_config().server_id).await.inspect_err(|e| {
+        error!("An error occured while deleting data: {e}. Exiting...");
         process::exit(1);
     }).ok();
+
+    // Get interface addresses
+    let addresses = get_interface_addresses(&handle, &server.get_config().interface_filter, &server, true).await;
+
+    if let Ok(addrs) = addresses {
+        add_addr(client, addrs).await.inspect_err(|e| {
+            error!("An error occured while deleting data: {e}.");
+        }).ok();
+    }
 }
 
 pub async fn check_for_interface_updates(handle: &Handle, client: &Client, server: &ServerConfiguration) {
     let mut interval = interval(Duration::from_secs(5));
-    info!("Cheking for interface updates [5 seconds].");
-
+    info!("Checking for interface updates [5 seconds].");
 
     loop {
         interval.tick().await;
         info!("Checking for interfaces updates...");
 
-        // Get interface addresses concurrently.
-        let addresses = get_interface_addresses(&handle, &server.get_config().interface_filter, &server, false).await;
-        let db_addrs = get_addr(&client, &server.get_config()).await;
-
-        if let (Ok(addrs), Ok(db_addr)) = (addresses, db_addrs) {
-
-            let diff = compare(&addrs, &db_addr);
-
-            if !diff.creates.is_empty() {
-                info!("Creating new interfaces (Update)");
-                add_addr(client, diff.creates).await.ok();
+        let addresses = match get_interface_addresses(&handle, &server.get_config().interface_filter, &server, false).await {
+            Ok(addrs) => addrs,
+            Err(e) => {
+                error!("Failed to get interface addresses: {e}, skipping update cycle");
+                continue; // Skip this iteration and try again next time
             }
+        };
 
-            if !diff.updates.is_empty() {
-                info!("Updating interfaces (Update)");
-                update_addr(client, diff.updates).await.ok();
+        let db_addrs = match get_addr(&client, &server.get_config()).await {
+            Ok(addrs) => addrs,
+            Err(e) => {
+                error!("Failed to get addresses from database: {e}, skipping update cycle");
+                continue; // Skip this iteration and try again next time
             }
+        };
 
-            if !diff.deletes.is_empty() {
-                info!("Deleting interfaces (Update)");
-                delete_addr(client, diff.deletes).await.ok();
-            }
+        let diff = compare(&addresses, &db_addrs);
+
+        // Process creates (currently commented out)
+        if !diff.creates.is_empty() {
+            info!("Creating new interfaces (Update)");
+            add_addr(client, diff.creates).await.ok();
+        }
+
+        if !diff.updates.is_empty() {
+            info!("Updating interfaces (Update)");
+            update_addr(client, diff.updates).await.ok();
+        }
+
+        // Process deletes (currently commented out)
+        if !diff.deletes.is_empty() {
+            info!("Deleting interfaces (Update)");
+            delete_addr(client, diff.deletes).await.ok();
         }
     }
 }

@@ -9,6 +9,7 @@ use clap::Parser;
 use crate::config::{ config_file, cli };
 use super::get_server_info::get_machine_id;
 
+
 pub struct DbConnection {
     client: Client,
     config: Config

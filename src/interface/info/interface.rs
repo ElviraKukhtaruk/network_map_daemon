@@ -14,5 +14,7 @@ pub struct Stats {
     pub tx_bytes: u64,
     pub rx_bytes: u64,
     pub tx_dropped: u64,
-    pub rx_dropped: u64
+    pub rx_dropped: u64,
+    pub tx_error: u64,
+    pub rx_error: u64
 }

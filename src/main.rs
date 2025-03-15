@@ -1,9 +1,14 @@
+use std::time::Duration;
+
 use interface::get_address::{add_addr_to_database, check_for_interface_updates};
 use interface::get_stats::save_stats_every_second;
 
+use interface::info::{get_interface_address, get_interfaces_by_names};
 use server::server::add_server_to_database;
 use tokio;
 use rtnetlink::{new_connection, Error as rtnetlinkErr, Handle};
+use tokio::time::interval;
+use log::error;
 
 mod db;
 mod interface;
@@ -44,14 +49,20 @@ async fn main() -> Result<(), rtnetlinkErr> {
 
    add_addr_to_database(&handle, &client_clone, &server_config).await;
 
-   tokio::spawn(async move {
+   let updates_task = tokio::spawn(async move {
        check_for_interface_updates(&handle_clone, &client_clone, &server_conf_clone).await;
    });
 
    let stats_task = tokio::spawn(async move {
-       save_stats_every_second(&handle, &server_config, &con.get_client()).await;
+       if let Err(e) = save_stats_every_second(&handle, &server_config, &con.get_client()).await {
+           error!("Stats task failed: {e}");
+       }
    });
-   stats_task.await.ok();
+
+   tokio::select! {
+       _ = updates_task => error!("Interface update task unexpectedly terminated"),
+       _ = stats_task => error!("Stats task unexpectedly terminated"),
+   }
 
    Ok(())
 }

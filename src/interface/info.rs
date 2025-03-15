@@ -1,4 +1,6 @@
+use log::error;
 use std::net::{IpAddr, Ipv6Addr};
+use regex::Regex;
 use rtnetlink::{Error as rtnetlinkErr, Handle};
 use netlink_packet_route::link::{ LinkAttribute, LinkFlag, LinkHeader, LinkMessage };
 use netlink_packet_route::address::{ AddressMessage, AddressAttribute::{ Address, Local }};
@@ -13,6 +15,56 @@ pub async fn get_all_interfaces(handle: &Handle) -> Result<Vec<LinkMessage>, rtn
 
     let response_link = stream.try_collect::<Vec<LinkMessage>>().await?;
     Ok(response_link)
+}
+
+pub async fn get_interfaces_by_names(handle: &Handle, interface_names: Vec<String>) -> Result<Vec<LinkMessage>, rtnetlinkErr> {
+    let mut link_handle = handle.link().get();
+    for name in interface_names {
+        link_handle = link_handle.match_name(name);
+    }
+    // Execute the query with all filters applied
+    let stream = link_handle.execute();
+    let response_links = stream.try_collect::<Vec<LinkMessage>>().await?;
+
+    Ok(response_links)
+}
+
+pub async fn get_filtered_interfaces_names(handle: &Handle, rules: &[Option<String>]) -> Result<Vec<String>, rtnetlinkErr> {
+    let compiled_rules: Vec<Option<Regex>> = rules
+            .iter()
+            .map(|rule_opt| rule_opt.as_ref().and_then(|pattern| Regex::new(pattern).ok()))
+            .collect();
+
+    let all_interfaces = get_all_interfaces(&handle).await?;
+    let mut matching_interface_names: Vec<String> = Vec::new();
+    let only_none_or_empty = rules.is_empty() || rules.iter().all(|rule| rule.is_none());
+
+    for interface in all_interfaces {
+        let int_name = get_interface_name_from_attribute(interface.attributes);
+        let is_loopback = get_loopback_from_header(interface.header);
+
+        if let Some(name) = int_name {
+            // If rules are empty or [None], include all non-loopback interfaces
+            if only_none_or_empty {
+                if !is_loopback {
+                    matching_interface_names.push(name);
+                }
+            } else {
+                let interface_name_match = compiled_rules.iter().any(|opt_regex| {
+                    if let Some(regex) = opt_regex {
+                        regex.is_match(&name)
+                    } else {
+                        // If rule is None, allow non-loopback interfaces.
+                        !is_loopback
+                    }
+                });
+                if interface_name_match && !is_loopback {
+                    matching_interface_names.push(name);
+                }
+            }
+        }
+    }
+    Ok(matching_interface_names)
 }
 
 pub async fn get_interface_status(handle: &Handle, name: &String) -> Result<bool, rtnetlinkErr> {
@@ -40,7 +92,9 @@ pub async fn get_interface_stats(handle: &Handle, name: &String) -> Result<inter
                 tx_bytes: status.tx_bytes,
                 rx_bytes: status.rx_bytes,
                 tx_dropped: status.tx_dropped,
-                rx_dropped: status.rx_dropped
+                rx_dropped: status.rx_dropped,
+                tx_error: status.tx_errors,
+                rx_error: status.rx_errors
             });
         }
     }
@@ -78,11 +132,13 @@ pub fn get_loopback_from_header(header: LinkHeader) -> bool {
 
 pub async fn get_interface_address(handle: &Handle, name: &String) -> Result<Vec<interface::InterfaceAddr>, rtnetlinkErr> {
     let address_handle = handle.address().get();
+
     let interface_index = get_index_by_name(handle, name).await?;
     let get_address = address_handle.set_link_index_filter(interface_index);
 
+
     let result_response_address: Result<Vec<AddressMessage>, rtnetlinkErr> = get_address.execute().try_collect().await;
-    let response_address: Vec<AddressMessage> = result_response_address.into_iter().flatten().collect();
+    let response_address: Vec<AddressMessage> = result_response_address.clone().into_iter().flatten().collect();
 
     let mut int_addresses: Vec<interface::InterfaceAddr> = vec![];
 
@@ -122,7 +178,7 @@ pub async fn get_interface_address(handle: &Handle, name: &String) -> Result<Vec
 
         int_addresses.push(int_addr);
     }
-    if response_address.len() > 0 || response_address.is_empty() {
+    if !response_address.is_empty() {
         Ok(int_addresses)
     } else {
         Err(rtnetlinkErr::RequestFailed)
