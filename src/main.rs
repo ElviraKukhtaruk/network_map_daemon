@@ -10,6 +10,7 @@ mod db;
 mod interface;
 mod config;
 mod server;
+mod tests;
 
 use crate::config::config:: { DbConnection, ServerConfiguration };
 use crate::db::queries;

@@ -1,5 +1,6 @@
 use std::net::{IpAddr, Ipv6Addr};
 use regex::Regex;
+use log::error;
 use rtnetlink::{Error as rtnetlinkErr, Handle};
 use netlink_packet_route::link::{ LinkAttribute, LinkFlag, LinkHeader, LinkMessage };
 use netlink_packet_route::address::{ AddressMessage, AddressAttribute::{ Address, Local }};
@@ -168,6 +169,7 @@ pub async fn get_interface_address(handle: &Handle, name: &String) -> Result<Vec
     if !response_address.is_empty() {
         Ok(int_addresses)
     } else {
+        error!("RTNetlink error on interface: {name}, likely missing IP addresses.");
         Err(rtnetlinkErr::RequestFailed)
     }
 }

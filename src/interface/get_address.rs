@@ -26,20 +26,35 @@ pub async fn get_interface_addresses(handle: &Handle, rules: &[Option<String>], 
 
     // Process each filtered interface
     let max_concurrent = 10;
-    let addrs: Result<Vec<Addr>, rtnetlink::Error> = futures::stream::iter(matching_interface_names)
-        .map(|name| {
-            async move {
-                get_addresses(handle, name, config, verbose).await.inspect_err(|e| {
-                    error!("An error occured while getting address! {e}");
-                })
-            }
-        })
-        .buffer_unordered(max_concurrent)
-        .collect::<Vec<Result<Addr, rtnetlink::Error>>>()
-        .await
-        .into_iter()
-        .collect();
+    let addrs: Result<Vec<Addr>, rtnetlink::Error> = {
+        let results = futures::stream::iter(matching_interface_names)
+            .map(|name| {
+                async move {
+                    get_addresses(handle, name, config, verbose).await.inspect_err(|e| {
+                        error!("An error occurred while getting address for {e}");
+                    })
+                }
+            })
+            .buffer_unordered(max_concurrent)
+            .collect::<Vec<Result<Addr, rtnetlink::Error>>>()
+            .await;
 
+        // Filter out the successful results
+        let successful_addrs: Vec<Addr> = results.iter()
+            .filter_map(|res| res.as_ref().ok().cloned())
+            .collect();
+
+        // At least one successful result
+        if !successful_addrs.is_empty() {
+            Ok(successful_addrs)
+        } else {
+            // If all failed
+            results.into_iter()
+                .find_map(|res| res.err())
+                .map(|e| Err(e))
+                .unwrap_or(Err(rtnetlink::Error::RequestFailed))
+        }
+    };
     addrs
 }
 
