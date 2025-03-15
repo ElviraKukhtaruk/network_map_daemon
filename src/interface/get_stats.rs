@@ -1,13 +1,12 @@
 use log::{error, info};
 use clickhouse::Client;
 use rtnetlink::{Error, Handle};
-use regex::Regex;
 use tokio::time::{interval, Duration};
 use crate::config::config::ServerConfiguration;
 use crate::queries::add_stat;
 use std::{collections::HashMap, time::{SystemTime, UNIX_EPOCH}};
 use crate::db::schema::Stat;
-use super::info::{get_all_interfaces, get_filtered_interfaces_names, get_interface_name_from_attribute, get_interface_stats, get_loopback_from_header};
+use super::info::{get_filtered_interfaces_names, get_interface_stats};
 use futures::stream::StreamExt;
 use std::sync::Arc;
 

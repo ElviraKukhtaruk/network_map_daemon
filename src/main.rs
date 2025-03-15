@@ -1,18 +1,13 @@
-use std::time::Duration;
-
 use interface::get_address::{add_addr_to_database, check_for_interface_updates};
 use interface::get_stats::save_stats_every_second;
 
-use interface::info::{get_interface_address, get_interfaces_by_names};
 use server::server::add_server_to_database;
 use tokio;
 use rtnetlink::{new_connection, Error as rtnetlinkErr, Handle};
-use tokio::time::interval;
 use log::error;
 
 mod db;
 mod interface;
-mod errors;
 mod config;
 mod server;
 

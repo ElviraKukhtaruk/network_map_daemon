@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 use std::net::Ipv6Addr;
 use std::process;
-use std::sync::Arc;
 use std::time::Duration;
 use futures::StreamExt;
 use clickhouse::Client;
-use regex::Regex;
-use rtnetlink::{Error, Handle};
+use rtnetlink::Handle;
 use log::{error, info, warn};
 use tokio::time::interval;
 

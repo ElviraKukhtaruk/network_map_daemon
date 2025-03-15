@@ -1,4 +1,3 @@
-use log::error;
 use std::net::{IpAddr, Ipv6Addr};
 use regex::Regex;
 use rtnetlink::{Error as rtnetlinkErr, Handle};
@@ -15,18 +14,6 @@ pub async fn get_all_interfaces(handle: &Handle) -> Result<Vec<LinkMessage>, rtn
 
     let response_link = stream.try_collect::<Vec<LinkMessage>>().await?;
     Ok(response_link)
-}
-
-pub async fn get_interfaces_by_names(handle: &Handle, interface_names: Vec<String>) -> Result<Vec<LinkMessage>, rtnetlinkErr> {
-    let mut link_handle = handle.link().get();
-    for name in interface_names {
-        link_handle = link_handle.match_name(name);
-    }
-    // Execute the query with all filters applied
-    let stream = link_handle.execute();
-    let response_links = stream.try_collect::<Vec<LinkMessage>>().await?;
-
-    Ok(response_links)
 }
 
 pub async fn get_filtered_interfaces_names(handle: &Handle, rules: &[Option<String>]) -> Result<Vec<String>, rtnetlinkErr> {

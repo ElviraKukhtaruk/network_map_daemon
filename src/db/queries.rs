@@ -1,11 +1,10 @@
 use clickhouse::error::Error;
 use futures::future::join_all;
-use log::{info, error};
+use log::info;
 use clickhouse::Client;
 use crate::schema::{ Server, Addr, Stat };
-use crate::errors::query::QueryErr;
 
-pub async fn server_exists(client: &Client, server: Server) -> Result<bool, QueryErr> {
+pub async fn server_exists(client: &Client, server: Server) -> Result<bool, Error> {
     let servers = client.query("SELECT * FROM server WHERE server_id = ?")
         .bind(server.server_id)
         .fetch_optional::<Server>().await;
@@ -13,10 +12,7 @@ pub async fn server_exists(client: &Client, server: Server) -> Result<bool, Quer
     match servers {
         Ok(Some(_)) => Ok(true),
         Ok(None) => Ok(false),
-        Err(err) => {
-            error!("An error occured while checking server: {}", err);
-            return Err(QueryErr::ClickhouseError);
-        }
+        Err(err) => Err(err)
     }
 }
 
