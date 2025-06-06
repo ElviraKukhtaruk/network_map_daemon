@@ -120,22 +120,22 @@ pub fn get_loopback_from_header(header: LinkHeader) -> bool {
 
 pub async fn get_interface_address(handle: &Handle, name: &String) -> Result<Vec<interface::InterfaceAddr>, rtnetlinkErr> {
     let address_handle = handle.address().get();
-
     let interface_index = get_index_by_name(handle, name).await?;
     let get_address = address_handle.set_link_index_filter(interface_index);
-
-
     let result_response_address: Result<Vec<AddressMessage>, rtnetlinkErr> = get_address.execute().try_collect().await;
     let response_address: Vec<AddressMessage> = result_response_address.clone().into_iter().flatten().collect();
-
     let mut int_addresses: Vec<interface::InterfaceAddr> = vec![];
+
+    // Helper function to detect if an IPv6 address is link-local
+    fn is_ipv6_link_local(addr: &Ipv6Addr) -> bool {
+        let first_16_bits = (u128::from(*addr) >> 112) as u16;
+        (first_16_bits & 0xFFC0) == 0xFE80
+    }
 
     for address_message in &response_address {
         let address_attributes = &address_message.attributes;
-
         let mut address: Option<IpAddr> = None;
         let mut local: Option<IpAddr> = None;
-
         let mut address_mapped: Option<Ipv6Addr> = None;
         let mut local_mapped: Option<Ipv6Addr> = None;
 
@@ -159,6 +159,16 @@ pub async fn get_interface_address(handle: &Handle, name: &String) -> Result<Vec
             None => ()
         }
 
+        // Skip link-local addresses with /64 mask
+        let is_link_local = address_mapped.as_ref()
+            .map(|addr| is_ipv6_link_local(addr))
+            .unwrap_or(false);
+
+        if is_link_local && address_message.header.prefix_len == 64 {
+            // Skip this address
+            continue;
+        }
+
         let int_addr = interface::InterfaceAddr {
             address: (address_mapped, Some(address_message.header.prefix_len)),
             local: (local_mapped, Some(address_message.header.prefix_len))
@@ -166,10 +176,11 @@ pub async fn get_interface_address(handle: &Handle, name: &String) -> Result<Vec
 
         int_addresses.push(int_addr);
     }
-    if !response_address.is_empty() {
+
+    if !int_addresses.is_empty() {
         Ok(int_addresses)
     } else {
-        error!("RTNetlink error on interface: {name}, likely missing IP addresses.");
+        error!("RTNetlink error on interface: {name}, likely missing IP addresses or all addresses were filtered.");
         Err(rtnetlinkErr::RequestFailed)
     }
 }
