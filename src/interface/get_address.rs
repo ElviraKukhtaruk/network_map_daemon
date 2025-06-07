@@ -156,7 +156,6 @@ pub async fn check_for_interface_updates(handle: &Handle, client: &Client, serve
 
         let diff = compare(&addresses, &db_addrs);
 
-        // Process creates (currently commented out)
         if !diff.creates.is_empty() {
             info!("Creating new interfaces (Update)");
             add_addr(client, diff.creates).await.ok();
@@ -167,7 +166,6 @@ pub async fn check_for_interface_updates(handle: &Handle, client: &Client, serve
             update_addr(client, diff.updates).await.ok();
         }
 
-        // Process deletes (currently commented out)
         if !diff.deletes.is_empty() {
             info!("Deleting interfaces (Update)");
             delete_addr(client, diff.deletes).await.ok();
